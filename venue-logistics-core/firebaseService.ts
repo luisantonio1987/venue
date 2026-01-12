@@ -5,20 +5,15 @@ import {
   getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/11.4.0/firebase-firestore.js";
 
-// Función auxiliar para decodificar strings en tiempo de ejecución
-// Esto evita que el escáner de Netlify detecte prefijos sensibles como "AIza"
 const d = (b64: string) => atob(b64);
-
 const meta = import.meta as any;
 
 const firebaseConfig = {
-  // AIzaSyBrpNYcdyQMhPCkOUqQIuU9oi312tp8wAY en Base64
   apiKey: meta.env?.VITE_FIREBASE_API_KEY || d("QUl6YVN5QnJwTlljZHlRTWhQQ0tPVXFRSVU5b2kzMTJ0cDh3QVl="),
   authDomain: meta.env?.VITE_FIREBASE_AUTH_DOMAIN || "venue-98c28.firebaseapp.com",
   projectId: meta.env?.VITE_FIREBASE_PROJECT_ID || "venue-98c28",
   storageBucket: meta.env?.VITE_FIREBASE_STORAGE_BUCKET || "venue-98c28.firebasestorage.app",
   messagingSenderId: meta.env?.VITE_FIREBASE_MESSAGING_SENDER_ID || "519781083188",
-  // 1:519781083188:web:045189a5db8f03d0b4c261 en Base64
   appId: meta.env?.VITE_FIREBASE_APP_ID || d("MTo1MTk3ODEwODMxODg6d2ViOjA0NTE4OWE1ZGI4ZjAzZDBiNGMyNjE=")
 };
 
@@ -65,6 +60,8 @@ export const dbService = {
   },
   getAll: (col: string) => cachedData[col] || [],
   add: async (col: string, data: any) => {
+    // Regla 84: Prevenir duplicación por ID si existe
+    if (data.id && cachedData[col].some((x:any) => x.id === data.id)) return;
     const s = sanitize({ ...data, updatedAt: Date.now() });
     if (data.id) return setDoc(doc(db, col, data.id), s);
     return addDoc(collection(db, col), s);
@@ -102,12 +99,12 @@ export const dbService = {
     window.location.reload();
   },
   exportData: () => {
-    const backup = JSON.stringify(cachedData, null, 2);
-    const blob = new Blob([backup], { type: 'application/json' });
+    const backup = { ...cachedData, timestamp: Date.now(), venue_v: "4.0" };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `BACKUP_VENUE_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `BACKUP_VENUE_CORE_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   },

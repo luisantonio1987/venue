@@ -38,16 +38,17 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
   });
 
   useEffect(() => {
+    // Regla 65: Respaldo persuasivo los lunes
     const isMonday = new Date().getDay() === 1;
     if (user.role === UserRole.ADMIN_TOTAL && isMonday) {
       setModal({
-        isOpen: true, type: 'persuade', title: 'RESPALDO SEMANAL',
-        message: 'HOY ES LUNES. SE RECOMIENDA GENERAR UN RESPALDO INTEGRAL DE LA BASE DE DATOS PARA EVITAR PÉRDIDAS.',
+        isOpen: true, type: 'persuade', title: 'RESPALDO REQUERIDO',
+        message: 'INICIANDO SEMANA: SE RECOMIENDA GENERAR UN RESPALDO INTEGRAL DE DATOS.',
         onConfirm: () => dbService.exportData()
       });
     }
     return dbService.subscribe((data: any) => {
-      // Regla 84: Evitar duplicación mediante filtrado de integridad
+      // Regla 84: Evitar duplicación
       const uniqueUsers = (data.users || []).filter((u: UserAccount, index: number, self: UserAccount[]) =>
         index === self.findIndex((t) => t.username === u.username)
       );
@@ -57,7 +58,7 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
 
   const handleFactoryReset = async () => {
     if (resetPassword !== user.password) {
-      setModal({ isOpen: true, type: 'danger', title: 'CLAVE INCORRECTA', message: 'LA CONTRASEÑA NO COINCIDE CON SU PERFIL ADMINISTRADOR.' });
+      setModal({ isOpen: true, type: 'danger', title: 'VALIDACIÓN FALLIDA', message: 'LA CONTRASEÑA NO ES CORRECTA.' });
       return;
     }
     await dbService.factoryReset();
@@ -81,17 +82,17 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
       <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={() => setModal({ ...modal, isOpen: false })} />
       
       <div className="flex flex-col md:flex-row justify-between items-center bg-white p-8 rounded-[3.5rem] border shadow-sm gap-4">
-        <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">CONFIGURACIÓN DE SEGURIDAD</h2>
+        <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">CONTROL DE SEGURIDAD</h2>
         <div className="flex flex-wrap gap-3">
-          <button onClick={() => dbService.exportData()} className="px-8 py-4 bg-slate-100 text-slate-700 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-slate-200 shadow-sm transition-all"><Download size={18}/> RESPALDO DATOS</button>
-          {user.role === UserRole.ADMIN_TOTAL && <button onClick={() => setResetConfirmOpen(true)} className="px-8 py-4 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-red-100 shadow-sm transition-all"><RefreshCcw size={18}/> RESET FÁBRICA</button>}
+          <button onClick={() => dbService.exportData()} className="px-8 py-4 bg-slate-100 text-slate-700 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-slate-200 transition-all shadow-sm"><Download size={18}/> RESPALDO</button>
+          {user.role === UserRole.ADMIN_TOTAL && <button onClick={() => setResetConfirmOpen(true)} className="px-8 py-4 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-sm transition-all hover:bg-red-100"><RefreshCcw size={18}/> LIMPIEZA TOTAL</button>}
           <button onClick={() => setIsFormOpen(true)} className="px-8 py-4 shimmer-bg text-white rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-xl hover:scale-105 transition-all"><UserPlus size={18}/> NUEVO USUARIO</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {users.map(u => (
-          <div key={u.id} className="bg-white p-6 rounded-[2.5rem] border shadow-sm flex items-center justify-between group">
+          <div key={u.id} className="bg-white p-6 rounded-[2.5rem] border shadow-sm flex items-center justify-between group relative overflow-hidden">
              <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-lg">{u.username.charAt(0)}</div>
                 <div>
@@ -99,9 +100,12 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">{u.role.replace('_', ' ')}</p>
                 </div>
              </div>
-             <div className="flex gap-1">
+             {/* Regla 86: Botones siempre visibles */}
+             <div className="flex gap-1 action-button-container">
                 <button className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"><Edit3 size={16}/></button>
-                <button onClick={() => dbService.delete('users', u.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                <button onClick={() => {
+                  setModal({ isOpen: true, type: 'danger', title: 'BORRAR USUARIO', message: `¿ESTÁ SEGURO DE REMOVER EL ACCESO DE ${u.name}?`, onConfirm: () => dbService.delete('users', u.id) });
+                }} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
              </div>
           </div>
         ))}
@@ -112,8 +116,8 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
           <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-5xl p-12 space-y-10 animate-scale-in border-t-[16px] border-t-blue-600 my-auto">
             <div className="flex justify-between border-b pb-6">
               <div>
-                <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">MATRIZ DE ACCESO (REGLA 76)</h3>
-                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">ASIGNE PERMISOS ESPECÍFICOS POR MÓDULO Y ACCIÓN</p>
+                <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">CREACIÓN DE ACCESO DETALLADO</h3>
+                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 tracking-tighter">MATRIZ DE PERMISOS POR MÓDULO (REGLA 76)</p>
               </div>
               <button onClick={() => setIsFormOpen(false)} className="text-slate-300 hover:text-red-500 transition-all"><X size={32} /></button>
             </div>
@@ -121,12 +125,12 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                <div className="lg:col-span-4 space-y-6">
                   <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">NOMBRE COMPLETO</label><input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs uppercase shadow-inner outline-none" /></div>
-                  <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">ID USUARIO (LOGIN)</label><input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs uppercase shadow-inner outline-none" /></div>
-                  <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">CLAVE TEMPORAL</label><input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs uppercase shadow-inner outline-none" /></div>
+                  <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">USUARIO LOGIN</label><input value={formData.username} onChange={e => setFormData({...formData, username: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs uppercase shadow-inner outline-none" /></div>
+                  <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">CONTRASEÑA</label><input type="text" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs uppercase shadow-inner outline-none" /></div>
                   <div><label className="text-[10px] font-black text-slate-400 mb-2 block ml-1">ROL MAESTRO</label><select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as any})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black uppercase text-xs shadow-inner outline-none"><option value={UserRole.STAFF}>STAFF OPERATIVO</option><option value={UserRole.ADMIN_PARCIAL}>ADMINISTRADOR PARCIAL</option><option value={UserRole.ADMIN_TOTAL}>SUPER ADMINISTRADOR</option></select></div>
                </div>
                
-               <div className="lg:col-span-8 overflow-x-auto no-scrollbar border rounded-[2rem] bg-slate-50 shadow-inner">
+               <div className="lg:col-span-8 overflow-x-auto no-scrollbar border rounded-[2rem] bg-slate-50 shadow-inner p-2">
                   <table className="w-full text-left">
                     <thead className="bg-white border-b"><tr className="text-[8px] font-black text-slate-400 uppercase tracking-widest"><th className="px-6 py-4">MÓDULO</th><th className="px-2 text-center">VER</th><th className="px-2 text-center">CREAR</th><th className="px-2 text-center">EDITAR</th><th className="px-2 text-center">ANULAR</th><th className="px-2 text-center">BORRAR</th></tr></thead>
                     <tbody className="divide-y text-[10px] font-bold uppercase">
@@ -151,11 +155,11 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
               onClick={async () => { 
                 await dbService.add('users', {...formData, status: 'ACTIVO', mustChangePassword: true, createdAt: Date.now()}); 
                 setIsFormOpen(false); 
-                setModal({isOpen: true, type: 'success', title: 'USUARIO ACTIVADO', message: 'EL PERFIL HA SIDO REGISTRADO. DEBERÁ CAMBIAR CLAVE AL PRIMER ACCESO.'});
+                setModal({isOpen: true, type: 'success', title: 'USUARIO REGISTRADO', message: 'ACCESO ACTIVADO. DEBERÁ CAMBIAR CLAVE AL INGRESO.'});
               }} 
               className="w-full py-6 shimmer-bg text-white rounded-[2.5rem] font-black uppercase text-[11px] shadow-2xl active:scale-95 transition-all"
             >
-              REGISTRAR PERFIL DE ACCESO EN SISTEMA
+              REGISTRAR PERFIL DE ACCESO
             </button>
           </div>
         </div>
@@ -167,9 +171,9 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
             <div className="mx-auto w-24 h-24 bg-red-50 text-red-600 rounded-[2.5rem] flex items-center justify-center shadow-inner"><RefreshCcw size={48}/></div>
             <div>
               <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">RESETEO DE FÁBRICA</h3>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 leading-relaxed">ESTA ACCIÓN BORRARÁ TODA LA INFORMACIÓN PERMANENTEMENTE. INGRESE SU CLAVE DE ADMINISTRADOR PARA VALIDAR.</p>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 leading-relaxed">BORRADO INTEGRAL DE DATOS. ESTA ACCIÓN NO SE PUEDE DESHACER.</p>
             </div>
-            <div className="relative"><KeyRound size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300"/><input type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="••••••••" className="w-full p-6 pl-16 bg-slate-50 border-2 rounded-3xl font-black text-center text-2xl outline-none focus:border-red-500 shadow-inner" /></div>
+            <div className="relative"><KeyRound size={20} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300"/><input type="password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="PIN ADMIN" className="w-full p-6 pl-16 bg-slate-50 border-2 rounded-3xl font-black text-center text-2xl outline-none focus:border-red-500 shadow-inner" /></div>
             <div className="grid grid-cols-2 gap-4">
               <button onClick={() => setResetConfirmOpen(false)} className="py-5 bg-slate-100 text-slate-400 rounded-3xl font-black uppercase text-[10px] hover:bg-slate-200">CANCELAR</button>
               <button onClick={handleFactoryReset} className="py-5 bg-red-600 text-white rounded-3xl font-black uppercase text-[10px] shadow-lg active:scale-95">BORRAR TODO</button>

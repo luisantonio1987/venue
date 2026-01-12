@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { Client, Product, OrderItem, Order, UserAccount, CompanyData } from '../types';
 import { 
-  X, Check, ShoppingCart, Tag, Truck, Receipt, CalendarDays, UserPlus, Trash2, ArrowRight
+  X, Check, ShoppingCart, Tag, Truck, Receipt, UserPlus, Trash2, ArrowRight
 } from 'lucide-react';
 import Modal, { ModalType } from '../components/Modal';
 import PaymentForm from '../components/PaymentForm';
@@ -82,7 +82,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
 
   const subtotalBruto = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
   
-  // Regla 1: El descuento se aplicará a todo lo solicitado, a excepción de transporte y servicio de saloneros
+  // Regla 1: Descuento excluye transporte y saloneros
   const discountableSubtotal = items.filter(i => 
     !toUpper(i.name).includes('TRANSPORTE') && !toUpper(i.name).includes('SALONERO')
   ).reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
@@ -180,17 +180,18 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
         <div className="flex items-center gap-4 w-full md:w-auto">
           <button onClick={onCancel} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm"><X size={20}/></button>
           <div className="flex bg-slate-100 p-1 rounded-2xl border shadow-inner flex-1 md:flex-initial">
+            {/* Regla 1: Pulsación latente en pestaña activa */}
             <button 
               onClick={() => setActiveTab('SALE')} 
-              className={`flex-1 md:flex-none px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
+              className={`flex-1 md:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
             >
-              MODULO VENTA
+              MÓDULO VENTA
             </button>
             <button 
               onClick={() => setActiveTab('PROFORMA')} 
-              className={`flex-1 md:flex-none px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
+              className={`flex-1 md:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
             >
-              MODULO PROFORMA
+              MÓDULO PROFORMA
             </button>
           </div>
         </div>
@@ -263,6 +264,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                           <input type="text" value={item.quantity === 0 ? '' : item.quantity} onChange={e => setItems(items.map(i => i.productId === item.productId ? {...i, quantity: parseInt(e.target.value.replace(/\D/g,'')) || 0} : i))} className="w-14 p-2 bg-slate-50 border-2 rounded-xl text-center font-black" />
                         </td>
                         <td className="px-4 py-5 text-center">
+                          {/* Regla: Se puede modificar los precios en el formulario */}
                           <input type="text" value={item.price === 0 ? '' : item.price} onChange={e => setItems(items.map(i => i.productId === item.productId ? {...i, price: parseNum(e.target.value)} : i))} className="w-20 p-2 bg-slate-50 border-2 rounded-xl text-center font-black text-blue-600" />
                         </td>
                         <td className="px-8 py-5 text-right font-black text-slate-900">${(item.price * item.quantity * rentalDays).toFixed(2)}</td>
@@ -280,6 +282,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
           <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6 sticky top-24 max-h-[85vh] overflow-y-auto no-scrollbar flex flex-col">
             <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-3 border-b pb-5 shrink-0"><Receipt size={20} className="text-blue-600"/> LIQUIDACIÓN FINANCIERA</h3>
             <div className="space-y-4 flex-1">
+              {/* Regla 48/50: Mejora visual de liquidación sin recortes */}
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${hasTransport ? 'bg-blue-50 border-blue-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${hasTransport ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-300'}`}>
@@ -297,7 +300,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
               </div>
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${parseNum(discountValue) > 0 ? 'bg-amber-50 border-amber-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="EXCLUYE TRANSPORTE Y SERVICIO DE SALONEROS"><Tag size={16}/> DESCUENTO</span>
+                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="REGLA 1: EXCLUYE TRANSPORTE Y SALONEROS EN EL CÁLCULO"><Tag size={16}/> DESCUENTO</span>
                   <div className="flex bg-white rounded-xl p-1 border shadow-sm">
                     <button onClick={() => setDiscountType('PERCENTAGE')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'PERCENTAGE' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>%</button>
                     <button onClick={() => setDiscountType('NOMINAL')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'NOMINAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>$</button>

@@ -69,7 +69,7 @@ const ReturnsModule = () => {
       });
 
     if (noveltyItems.length === 0 && !novedadReport.observations.trim()) {
-      setModal({ isOpen: true, type: 'warning', title: 'SIN DATOS', message: 'DEBE REGISTRAR AL MENOS UN ÍTEM AFECTADO O UNA OBSERVACIÓN.' });
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS INCOMPLETOS', message: 'DEBE REGISTRAR AL MENOS UN ÍTEM AFECTADO O UNA OBSERVACIÓN.' });
       return;
     }
 
@@ -105,8 +105,8 @@ const ReturnsModule = () => {
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl p-8 space-y-6 animate-scale-in border-t-[12px] border-amber-500 overflow-hidden flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center border-b pb-4 shrink-0">
               <div>
-                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">REPORTE TÉCNICO DE NOVEDADES</h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase mt-1">PEDIDO: {novedadReport.order.id}</p>
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest leading-none">REPORTE TÉCNICO DE NOVEDADES</h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase mt-2">PEDIDO: {novedadReport.order.id}</p>
               </div>
               <button onClick={() => setNovedadReport({ ...novedadReport, isOpen: false })} className="text-slate-300 hover:text-red-500 p-1 transition-all"><X size={24}/></button>
             </div>
@@ -142,7 +142,7 @@ const ReturnsModule = () => {
                                 });
                               }}
                               placeholder="0"
-                              className="w-16 p-2 bg-white border-2 border-slate-100 rounded-xl text-center font-black text-xs text-red-600 shadow-sm outline-none focus:border-red-400 shadow-inner"
+                              className="w-16 p-2 bg-white border-2 border-slate-100 rounded-xl text-center font-black text-xs text-red-600 shadow-sm outline-none focus:border-red-400"
                             />
                           </td>
                         </tr>
@@ -195,9 +195,10 @@ const ReturnsModule = () => {
                  <p className="text-[9px] font-black text-slate-700 leading-none">{new Date(o.eventDateEnd).toLocaleDateString('es-EC')}</p>
                </div>
             </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => handleReturnAction(o, 'PARTIAL')} className="flex-1 py-3.5 bg-white text-red-600 border border-red-100 rounded-2xl font-black uppercase text-[9px] flex items-center justify-center gap-2 hover:bg-red-50 shadow-sm transition-all" title="Reportar daños o faltantes"><AlertTriangle size={14}/> NOVEDAD</button>
-              <button onClick={() => handleReturnAction(o, 'TOTAL')} className="flex-1 py-3.5 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[9px] shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95" title="Confirmar retorno completo en buen estado"><CheckCircle2 size={16}/> RETIRO OK</button>
+            {/* Regla 86: Botones siempre visibles */}
+            <div className="flex gap-2 pt-2 action-button-container">
+              <button onClick={() => handleReturnAction(o, 'PARTIAL')} className="flex-1 py-3.5 bg-white text-red-600 border border-red-100 rounded-2xl font-black uppercase text-[9px] flex items-center justify-center gap-2 hover:bg-red-50 shadow-sm transition-all"><AlertTriangle size={14}/> NOVEDAD</button>
+              <button onClick={() => handleReturnAction(o, 'TOTAL')} className="flex-1 py-3.5 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[9px] shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"><CheckCircle2 size={16}/> RETIRO OK</button>
             </div>
           </div>
         ))}

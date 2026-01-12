@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { dbService, DbStatus } from './firebaseService';
 import { UserAccount, UserRole, CompanyData } from './types';
@@ -15,13 +14,11 @@ import InventoryModule from './modules/InventoryModule';
 import ClientsModule from './modules/ClientsModule';
 import CashModule from './modules/CashModule';
 import SystemModule from './modules/SystemModule';
-// Added missing module imports
 import PortfolioModule from './modules/PortfolioModule';
 import PettyCashModule from './modules/PettyCashModule';
 import ReportsModule from './modules/ReportsModule';
-// Added missing CompanySettings import
 import CompanySettings from './modules/CompanySettings';
-import { WifiOff, ShieldCheck, CheckCircle2, LogOut, User as UserIcon } from 'lucide-react';
+import { WifiOff, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg", light?: boolean }) => {
   const sizes = { sm: "h-10", md: "h-16", lg: "h-24" };
@@ -62,7 +59,6 @@ const App: React.FC = () => {
       setDbStatus(status);
       setCompany(data.company?.[0] || null);
       if (status === 'ready' && data.users.length === 0) {
-        // Usuario raíz si no existe nada
         dbService.add('users', {
           name: 'ADMINISTRADOR MAESTRO',
           username: 'ROOT',
@@ -70,7 +66,7 @@ const App: React.FC = () => {
           role: UserRole.ADMIN_TOTAL,
           status: 'ACTIVO',
           mustChangePassword: true,
-          permissions: {}, // Todo true por defecto en lógica
+          permissions: {},
           createdAt: Date.now()
         });
       }
@@ -95,13 +91,14 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setModal({
       isOpen: true, type: 'confirm', title: 'CERRAR SESIÓN',
-      message: '¿ESTÁ SEGURO QUE DESEA SALIR DEL SISTEMA?',
+      message: '¿CONFIRMA QUE DESEA SALIR DEL SISTEMA?',
       onConfirm: () => {
         setSessionMsg({ visible: true, type: 'out' });
         setTimeout(() => {
           sessionStorage.removeItem('venue_user');
           setCurrentUser(null);
           setSessionMsg({ visible: false, type: 'out' });
+          setActiveModule('dashboard');
         }, 1500);
       }
     });
@@ -111,8 +108,8 @@ const App: React.FC = () => {
     if (dbStatus === 'error') return (
       <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
         <WifiOff size={80} className="text-red-500 mb-8 animate-pulse" />
-        <h2 className="text-white font-black uppercase text-2xl mb-4 tracking-tighter">ERROR DE ENLACE</h2>
-        <button onClick={() => window.location.reload()} className="px-12 py-5 shimmer-bg text-white rounded-2xl font-black uppercase text-[11px] shadow-2xl">RECONECTAR SERVIDOR</button>
+        <h2 className="text-white font-black uppercase text-2xl mb-4 tracking-tighter">ERROR DE CONEXIÓN</h2>
+        <button onClick={() => window.location.reload()} className="px-12 py-5 shimmer-bg text-white rounded-2xl font-black uppercase text-[11px] shadow-2xl">REINTENTAR</button>
       </div>
     );
 
@@ -124,7 +121,7 @@ const App: React.FC = () => {
           <div className="bg-white rounded-[4rem] p-12 w-full max-w-md shadow-2xl space-y-12 border-t-[16px] border-blue-600 animate-scale-in">
             <div className="text-center space-y-4">
                <ShieldCheck className="mx-auto text-blue-600" size={60}/>
-               <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">NUEVO PIN</h2>
+               <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">ACTUALIZAR PIN</h2>
                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">POR SEGURIDAD, ACTUALICE SU CLAVE PERSONAL AL PRIMER INGRESO.</p>
             </div>
             <div className="space-y-6">
@@ -132,7 +129,7 @@ const App: React.FC = () => {
               <button onClick={async () => {
                 const pin = (document.getElementById('newPin') as HTMLInputElement).value;
                 if(pin.length < 3) {
-                  setModal({ isOpen: true, type: 'warning', title: 'LONGITUD INVÁLIDA', message: 'EL PIN DEBE TENER AL MENOS 3 CARACTERES.' });
+                  setModal({ isOpen: true, type: 'warning', title: 'DATOS INVÁLIDOS', message: 'EL PIN DEBE TENER AL MENOS 3 CARACTERES.' });
                   return;
                 }
                 await dbService.update('users', currentUser.id, { password: pin.toUpperCase(), mustChangePassword: false });
@@ -144,11 +141,10 @@ const App: React.FC = () => {
       );
     }
 
-    // After guards, currentUser is guaranteed to be non-null
     const safeUser = currentUser as UserAccount;
 
     switch (activeModule) {
-      case 'dashboard': return <Dashboard setActiveModule={setActiveModule} />;
+      case 'dashboard': return <Dashboard setActiveModule={setActiveModule} handleLogout={handleLogout} />;
       case 'sales': return <OrderForm onSaved={() => setActiveModule('orders')} onCancel={() => setActiveModule('dashboard')} company={company} user={safeUser} />;
       case 'orders': 
       case 'confirmed': return <ConfirmedOrders onEdit={(id) => { setEditingOrderId(id); setActiveModule('edit-order'); }} company={company} user={safeUser} />;
@@ -157,18 +153,14 @@ const App: React.FC = () => {
       case 'returns': return <ReturnsModule />;
       case 'pendings': return <PendingsModule />;
       case 'inventory': return <InventoryModule />;
-      // Fixed: Passed required 'user' prop to ClientsModule
       case 'clients': return <ClientsModule user={safeUser} />;
       case 'cash': return <CashModule company={company} />;
-      // Added missing module mappings
       case 'petty-cash': return <PettyCashModule />;
       case 'portfolio': return <PortfolioModule company={company} />;
       case 'reports': return <ReportsModule />;
       case 'system': return <SystemModule user={safeUser} />;
-      // Unified company-config case
-      case 'company':
       case 'company-config': return <CompanySettings company={company} />;
-      default: return <Dashboard setActiveModule={setActiveModule} />;
+      default: return <Dashboard setActiveModule={setActiveModule} handleLogout={handleLogout} />;
     }
   };
 
@@ -178,9 +170,9 @@ const App: React.FC = () => {
         <div className="p-12 bg-white rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl animate-scale-in border-t-[12px] border-blue-600">
            <CheckCircle2 size={72} className="text-emerald-500 animate-bounce" />
            <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">
-             {sessionMsg.type === 'in' ? 'INICIANDO ENTORNO' : 'CERRANDO ACCESO'}
+             {sessionMsg.type === 'in' ? 'INICIANDO SESIÓN' : 'CERRANDO SESIÓN'}
            </h2>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">CARGANDO MÓDULOS VENUE...</p>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">PROCESANDO ACCESO...</p>
         </div>
       </div>
     );
@@ -197,30 +189,9 @@ const App: React.FC = () => {
         </div>
       ) : (
         !currentUser || currentUser.mustChangePassword ? renderModule() : (
-          <div className="flex flex-col h-screen overflow-hidden">
-             <header className="h-16 bg-white border-b flex items-center justify-between px-8 z-[100] shrink-0">
-                <div className="flex items-center gap-4 lg:w-1/3">
-                  <Logo size="sm" />
-                </div>
-                <div className="lg:w-1/3 flex justify-center text-center">
-                  <div className="bg-slate-50 px-6 py-2 rounded-full border border-slate-100 flex items-center gap-3">
-                    <UserIcon size={14} className="text-blue-500" />
-                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{currentUser.name}</span>
-                  </div>
-                </div>
-                <div className="lg:w-1/3 flex justify-end items-center gap-4">
-                  <button onClick={handleLogout} className="p-2.5 text-slate-300 hover:text-red-500 transition-all group" title="CERRAR SESIÓN">
-                    <LogOut size={22} className="group-hover:scale-110 transition-transform" />
-                  </button>
-                  <div className="w-9 h-9 shimmer-bg rounded-xl flex items-center justify-center text-white font-black text-xs shadow-lg">
-                    {currentUser.name.charAt(0)}
-                  </div>
-                </div>
-             </header>
-             <Layout activeModule={activeModule} setActiveModule={setActiveModule} onLogout={handleLogout} user={currentUser} company={company}>
-               {renderModule()}
-             </Layout>
-          </div>
+          <Layout activeModule={activeModule} setActiveModule={setActiveModule} onLogout={handleLogout} user={currentUser} company={company}>
+            {renderModule()}
+          </Layout>
         )
       )}
     </div>

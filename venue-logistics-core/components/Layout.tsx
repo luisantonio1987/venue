@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   LayoutDashboard, ShoppingCart, Truck, RotateCcw, Box, Users, Wallet, Database, Briefcase, Menu, X, Package, ClipboardList, LogOut, FileText, Landmark, Banknote
@@ -63,23 +62,33 @@ const Layout: React.FC<LayoutProps> = ({ children, activeModule, setActiveModule
               </div>
             ))}
           </div>
+          {/* Regla 87: Botón de logout estrictamente al final del menú */}
           <div className="mt-6 pt-6 border-t">
-            <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-black uppercase text-[10px] text-red-500 hover:bg-red-50" title="SALIR DEL SISTEMA">
-              <LogOut size={18} /><span>Cerrar Sesión</span>
+            <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-black uppercase text-[10px] text-red-500 hover:bg-red-50" title="CERRAR SESIÓN">
+              <LogOut size={18} /><span>Salir del Sistema</span>
             </button>
           </div>
         </div>
       </aside>
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b flex items-center justify-between px-8 sticky top-0 z-[50] flex-shrink-0">
+        <header className="h-16 bg-white border-b flex items-center justify-between px-8 sticky top-0 z-[50] flex-shrink-0">
           <div className="flex items-center gap-4 lg:w-1/3">
             <button className="lg:hidden text-slate-500" onClick={() => setIsSidebarOpen(true)}><Menu size={24}/></button>
             <div className="hidden lg:block"><h2 className="text-[9px] font-black uppercase text-slate-800 tracking-tighter leading-none">{company?.fantasyName || 'VENUE LOGISTICS'}</h2></div>
           </div>
-          <div className="lg:w-1/3 flex justify-center text-center"><div className="bg-slate-100/50 px-6 py-2 rounded-full border border-slate-200"><p className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{user.name}</p></div></div>
-          <div className="lg:w-1/3 flex justify-end items-center gap-4"><button onClick={onLogout} className="p-2.5 text-slate-400 hover:text-red-500 transition-all"><LogOut size={20}/></button></div>
+          {/* Regla 29: Nombre de usuario central */}
+          <div className="lg:w-1/3 flex justify-center text-center">
+            <div className="bg-slate-100/50 px-6 py-2 rounded-full border border-slate-200">
+              <p className="text-[10px] font-black text-slate-800 uppercase tracking-widest leading-none">{user.name}</p>
+            </div>
+          </div>
+          <div className="lg:w-1/3 flex justify-end items-center gap-4">
+             <div className="w-8 h-8 shimmer-bg rounded-lg flex items-center justify-center text-white text-[10px] font-black shadow-md">{user.username.charAt(0)}</div>
+          </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6 max-w-7xl mx-auto w-full no-scrollbar">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 max-w-7xl mx-auto w-full no-scrollbar relative">
+          {children}
+        </main>
       </div>
     </div>
   );
