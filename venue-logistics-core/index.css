@@ -1,0 +1,8 @@
+
+/* Estilos base para asegurar que el proceso de build de Vite sea exitoso */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Los estilos específicos de la aplicación se mantienen en el index.html 
+   según los requerimientos de no modificar el diseño actual. */
