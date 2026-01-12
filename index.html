@@ -1,0 +1,77 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Venue Logistics - Sistema de Gestión Integral</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              'fade-in': 'fadeIn 0.2s ease-out',
+              'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              'shimmer': 'shimmer 2s infinite linear',
+              'pulse-latent': 'pulseLatent 2s infinite ease-in-out',
+            },
+            keyframes: {
+              fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+              scaleIn: { '0%': { opacity: '0', transform: 'scale(0.95) translateY(10px)' }, '100%': { opacity: '1', transform: 'scale(1) translateY(0)' } },
+              shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+              pulseLatent: {
+                '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)' },
+                '50%': { transform: 'scale(1.05)', filter: 'brightness(1.2)', boxShadow: '0 0 15px rgba(59, 130, 246, 0.5)' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; }
+        .shimmer-text { background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shimmer 3s infinite linear; }
+        .shimmer-bg { background: linear-gradient(90deg, #1e40af 0%, #60a5fa 50%, #1e40af 100%); background-size: 200% auto; animation: shimmer 3s infinite linear; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Regla 40: Todo dato ingresado en mayúscula, excepto emails */
+        input:not([type="email"]):not(.lowercase-input), 
+        textarea:not(.lowercase-input), 
+        select { 
+          text-transform: uppercase !important; 
+        }
+        
+        input, select, textarea { font-size: 16px !important; }
+        
+        @media print {
+          .print-hidden { display: none !important; }
+          .print-only { display: block !important; }
+          body { background: white !important; }
+          @page { size: A4; margin: 10mm; }
+        }
+        .print-only { display: none; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden">
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
+</body>
+</html>

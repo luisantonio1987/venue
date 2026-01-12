@@ -1,0 +1,22 @@
+
+{
+  "short_name": "VenueLog",
+  "name": "Venue Logistics - Sistema Integral de Gestión",
+  "icons": [
+    {
+      "src": "https://picsum.photos/192/192?random=venue1",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "https://picsum.photos/512/512?random=venue2",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1e40af",
+  "background_color": "#f8fafc",
+  "orientation": "any"
+}

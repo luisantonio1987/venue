@@ -1,0 +1,12 @@
+
+{
+  "name": "Venue Logistics Core",
+  "short_name": "VenueLog",
+  "description": "Sistema de Gestión Integral para Renta de Eventos",
+  "requestFramePermissions": [
+    "notifications",
+    "camera"
+  ],
+  "display": "standalone",
+  "orientation": "any"
+}

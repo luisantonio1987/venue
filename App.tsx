@@ -1,0 +1,226 @@
+
+import React, { useState, useEffect } from 'react';
+import { dbService, DbStatus } from './firebaseService';
+import { UserAccount, UserRole, CompanyData } from './types';
+import Layout from './components/Layout';
+import Modal, { ModalType } from './components/Modal';
+import LoginScreen from './modules/LoginScreen';
+import Dashboard from './modules/Dashboard';
+import OrderForm from './modules/OrderForm';
+import ConfirmedOrders from './modules/ConfirmedOrders';
+import DispatchModule from './modules/DispatchModule';
+import ReturnsModule from './modules/ReturnsModule';
+import PendingsModule from './modules/PendingsModule';
+import InventoryModule from './modules/InventoryModule';
+import ClientsModule from './modules/ClientsModule';
+import CashModule from './modules/CashModule';
+import SystemModule from './modules/SystemModule';
+import CompanySettings from './modules/CompanySettings';
+// Added missing module imports
+import PortfolioModule from './modules/PortfolioModule';
+import PettyCashModule from './modules/PettyCashModule';
+import ReportsModule from './modules/ReportsModule';
+import { WifiOff, ShieldCheck, CheckCircle2, LogOut, User as UserIcon } from 'lucide-react';
+
+export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg", light?: boolean }) => {
+  const sizes = { sm: "h-10", md: "h-16", lg: "h-24" };
+  return (
+    <div className={`flex items-center gap-3 ${sizes[size]}`}>
+      <svg viewBox="0 0 100 100" className="h-full overflow-visible shrink-0">
+        <defs>
+          <linearGradient id="logoGrad" x1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#1e40af" />
+            <stop offset="100%" stopColor="#3b82f6" />
+          </linearGradient>
+        </defs>
+        <path d="M20 20 L80 20 L80 80 L20 80 Z" fill="none" stroke="url(#logoGrad)" strokeWidth="12" />
+        <circle cx="50" cy="50" r="15" fill="url(#logoGrad)" />
+      </svg>
+      <div className="flex flex-col justify-center leading-none">
+        <span className={`font-black tracking-tighter uppercase ${size === 'lg' ? 'text-4xl' : size === 'md' ? 'text-2xl' : 'text-lg'} ${light ? 'text-white' : 'shimmer-text'}`}>VENUE</span>
+        <span className={`font-black tracking-[0.5em] uppercase opacity-60 ${size === 'lg' ? 'text-[11px]' : 'text-[8px]'} ${light ? 'text-blue-200' : 'text-slate-400'}`}>LOGISTICS</span>
+      </div>
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  const [activeModule, setActiveModule] = useState('dashboard');
+  const [dbStatus, setDbStatus] = useState<DbStatus>('loading');
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
+    const saved = sessionStorage.getItem('venue_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [company, setCompany] = useState<CompanyData | null>(null);
+  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [sessionMsg, setSessionMsg] = useState<{ visible: boolean; type: 'in' | 'out' }>({ visible: false, type: 'in' });
+  const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string; onConfirm?: () => void }>({ isOpen: false, type: 'info', title: '', message: '' });
+
+  useEffect(() => {
+    const unsubscribe = dbService.subscribe((data: any, status: DbStatus) => {
+      setDbStatus(status);
+      setCompany(data.company?.[0] || null);
+      if (status === 'ready' && data.users.length === 0) {
+        // Usuario raíz si no existe nada
+        dbService.add('users', {
+          name: 'ADMINISTRADOR MAESTRO',
+          username: 'ROOT',
+          password: '123',
+          role: UserRole.ADMIN_TOTAL,
+          status: 'ACTIVO',
+          mustChangePassword: true,
+          permissions: {}, // Todo true por defecto en lógica
+          createdAt: Date.now()
+        });
+      }
+    });
+
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = (user: UserAccount) => {
+    setSessionMsg({ visible: true, type: 'in' });
+    setTimeout(() => {
+      setCurrentUser(user);
+      sessionStorage.setItem('venue_user', JSON.stringify(user));
+      setSessionMsg({ visible: false, type: 'in' });
+    }, 1500);
+  };
+
+  const handleLogout = () => {
+    setModal({
+      isOpen: true, type: 'confirm', title: 'CERRAR SESIÓN',
+      message: '¿ESTÁ SEGURO QUE DESEA SALIR DEL SISTEMA?',
+      onConfirm: () => {
+        setSessionMsg({ visible: true, type: 'out' });
+        setTimeout(() => {
+          sessionStorage.removeItem('venue_user');
+          setCurrentUser(null);
+          setSessionMsg({ visible: false, type: 'out' });
+        }, 1500);
+      }
+    });
+  };
+
+  const renderModule = () => {
+    if (dbStatus === 'error') return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+        <WifiOff size={80} className="text-red-500 mb-8 animate-pulse" />
+        <h2 className="text-white font-black uppercase text-2xl mb-4 tracking-tighter">ERROR DE ENLACE</h2>
+        <button onClick={() => window.location.reload()} className="px-12 py-5 shimmer-bg text-white rounded-2xl font-black uppercase text-[11px] shadow-2xl">RECONECTAR SERVIDOR</button>
+      </div>
+    );
+
+    if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
+    
+    if (currentUser.mustChangePassword) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[4rem] p-12 w-full max-w-md shadow-2xl space-y-12 border-t-[16px] border-blue-600 animate-scale-in">
+            <div className="text-center space-y-4">
+               <ShieldCheck className="mx-auto text-blue-600" size={60}/>
+               <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">NUEVO PIN</h2>
+               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">POR SEGURIDAD, ACTUALICE SU CLAVE PERSONAL AL PRIMER INGRESO.</p>
+            </div>
+            <div className="space-y-6">
+              <input id="newPin" type="password" placeholder="NUEVO PIN" className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-3xl outline-none focus:border-blue-500 uppercase shadow-inner tracking-widest" />
+              <button onClick={async () => {
+                const pin = (document.getElementById('newPin') as HTMLInputElement).value;
+                if(pin.length < 3) return alert("MIN. 3 CARACTERES.");
+                await dbService.update('users', currentUser.id, { password: pin.toUpperCase(), mustChangePassword: false });
+                handleLogin({...currentUser, mustChangePassword: false});
+              }} className="w-full py-6 shimmer-bg text-white rounded-3xl font-black uppercase text-[11px] shadow-2xl active:scale-95 transition-all">ACTIVAR CUENTA</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // After guards, currentUser is guaranteed to be non-null
+    const safeUser = currentUser as UserAccount;
+
+    switch (activeModule) {
+      case 'dashboard': return <Dashboard setActiveModule={setActiveModule} />;
+      case 'sales': return <OrderForm onSaved={() => setActiveModule('orders')} onCancel={() => setActiveModule('dashboard')} company={company} user={safeUser} />;
+      case 'orders': 
+      case 'confirmed': return <ConfirmedOrders onEdit={(id) => { setEditingOrderId(id); setActiveModule('edit-order'); }} company={company} user={safeUser} />;
+      case 'edit-order': return <OrderForm editOrderId={editingOrderId || undefined} onSaved={() => setActiveModule('orders')} onCancel={() => setActiveModule('orders')} company={company} user={safeUser} />;
+      case 'dispatch': return <DispatchModule />;
+      case 'returns': return <ReturnsModule />;
+      case 'pendings': return <PendingsModule />;
+      case 'inventory': return <InventoryModule />;
+      // Fixed: Passed required 'user' prop to ClientsModule
+      case 'clients': return <ClientsModule user={safeUser} />;
+      case 'cash': return <CashModule company={company} />;
+      // Added missing module mappings
+      case 'petty-cash': return <PettyCashModule />;
+      case 'portfolio': return <PortfolioModule company={company} />;
+      case 'reports': return <ReportsModule />;
+      case 'system': return <SystemModule user={safeUser} />;
+      // Unified company-config case
+      case 'company':
+      case 'company-config': return <CompanySettings company={company} />;
+      default: return <Dashboard setActiveModule={setActiveModule} />;
+    }
+  };
+
+  if (sessionMsg.visible) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center animate-fade-in">
+        <div className="p-12 bg-white rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl animate-scale-in border-t-[12px] border-blue-600">
+           <CheckCircle2 size={72} className="text-emerald-500 animate-bounce" />
+           <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">
+             {sessionMsg.type === 'in' ? 'INICIANDO ENTORNO' : 'CERRANDO ACCESO'}
+           </h2>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">CARGANDO MÓDULOS VENUE...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen selection:bg-blue-100 font-sans antialiased bg-slate-50 no-scrollbar overflow-hidden">
+      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={() => setModal({ ...modal, isOpen: false })} />
+      {dbStatus === 'loading' ? (
+        <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-10 animate-fade-in">
+          <Logo size="lg" />
+          <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden relative"><div className="absolute inset-0 bg-blue-600 w-1/3 animate-[shimmer_2s_infinite_linear]"></div></div>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.8em] animate-pulse">CARGANDO...</p>
+        </div>
+      ) : (
+        !currentUser || currentUser.mustChangePassword ? renderModule() : (
+          <div className="flex flex-col h-screen overflow-hidden">
+             <header className="h-16 bg-white border-b flex items-center justify-between px-8 z-[100] shrink-0">
+                <div className="flex items-center gap-4 lg:w-1/3">
+                  <Logo size="sm" />
+                </div>
+                <div className="lg:w-1/3 flex justify-center text-center">
+                  <div className="bg-slate-50 px-6 py-2 rounded-full border border-slate-100 flex items-center gap-3">
+                    <UserIcon size={14} className="text-blue-500" />
+                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{currentUser.name}</span>
+                  </div>
+                </div>
+                <div className="lg:w-1/3 flex justify-end items-center gap-4">
+                  <button onClick={handleLogout} className="p-2.5 text-slate-300 hover:text-red-500 transition-all group" title="CERRAR SESIÓN">
+                    <LogOut size={22} className="group-hover:scale-110 transition-transform" />
+                  </button>
+                  <div className="w-9 h-9 shimmer-bg rounded-xl flex items-center justify-center text-white font-black text-xs shadow-lg">
+                    {currentUser.name.charAt(0)}
+                  </div>
+                </div>
+             </header>
+             <Layout activeModule={activeModule} setActiveModule={setActiveModule} onLogout={handleLogout} user={currentUser} company={company}>
+               {renderModule()}
+             </Layout>
+          </div>
+        )
+      )}
+    </div>
+  );
+};
+
+export default App;
