@@ -3,7 +3,7 @@ import { dbService } from '../firebaseService';
 import { Order } from '../types';
 import { 
   Calendar as CalendarIcon, Clock, AlertCircle, Wallet, ArrowRight, Quote, ChevronLeft, ChevronRight, 
-  TrendingUp, Monitor, LogOut, Download
+  TrendingUp, Monitor, LogOut, Download, Smartphone
 } from 'lucide-react';
 import { Logo } from '../App';
 
@@ -44,6 +44,20 @@ const Dashboard = ({ setActiveModule, handleLogout, handleInstall, hasInstallPro
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10 no-scrollbar">
+      {/* Aviso Persuasivo de Instalación para eliminar la barra (Regla 94) */}
+      {hasInstallPrompt && (
+        <div className="bg-blue-600 p-4 rounded-3xl text-white flex items-center justify-between shadow-2xl animate-pulse">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 p-2 rounded-xl"><Smartphone size={24}/></div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest">Mejora tu experiencia</p>
+              <p className="text-[9px] font-bold opacity-80 uppercase">Instala la App para eliminar la barra del navegador y evitar errores 404.</p>
+            </div>
+          </div>
+          <button onClick={handleInstall} className="bg-white text-blue-600 px-6 py-2 rounded-xl font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">INSTALAR AHORA</button>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-[2.5rem] border shadow-sm">
         <div className="space-y-1">
           <h1 className="text-3xl font-black text-slate-800 tracking-tighter uppercase leading-none">HOJA DE RUTA</h1>
@@ -60,20 +74,12 @@ const Dashboard = ({ setActiveModule, handleLogout, handleInstall, hasInstallPro
         </div>
 
         <div className="flex gap-2">
-           {/* Regla 91: Botón de instalación corporativo */}
-           {hasInstallPrompt && (
-             <button onClick={handleInstall} className="px-6 py-3 bg-blue-600 text-white rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-xl animate-bounce">
-               <Download size={16}/> INSTALAR APP
-             </button>
-           )}
-          {/* Regla 87: Un solo botón de logout en dashboard */}
           <button onClick={handleLogout} className="px-6 py-3 bg-red-50 text-red-600 rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-sm hover:bg-red-600 hover:text-white transition-all">
             <LogOut size={16}/> SALIR
           </button>
         </div>
       </div>
 
-      {/* Calendario de Hoja de Ruta */}
       <div className="grid grid-cols-1 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {weekDays.map(day => {
           const dayOrders = orders.filter(o => new Date(o.eventDateStart).toDateString() === day.toDateString());

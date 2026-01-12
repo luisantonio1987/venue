@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#1e40af">
+    
+    <!-- Enforzamiento de modo Standalone para evitar barra de URL (Regla 94) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="VenueLog">
+    
     <title>Venue Logistics - Core v5.0</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,20 +39,18 @@
       }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; margin: 0; padding: 0; }
         .shimmer-text { background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shimmer 3s infinite linear; }
         .shimmer-bg { background: linear-gradient(90deg, #1e40af 0%, #60a5fa 50%, #1e40af 100%); background-size: 200% auto; animation: shimmer 3s infinite linear; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* Regla 40: Todo dato ingresado en mayúscula, excepto emails */
         input:not([type="email"]):not(.lowercase-input), 
         textarea:not(.lowercase-input), 
         select { 
           text-transform: uppercase !important; 
         }
         
-        /* Regla 32: Evitar valores (0) visuales molestos */
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 
@@ -59,7 +62,6 @@
         }
         .print-only { display: none; }
 
-        /* Regla 86/89: Botones siempre visibles en móvil */
         .action-container { display: flex; flex-wrap: wrap; gap: 0.5rem; opacity: 1 !important; visibility: visible !important; }
     </style>
 <script type="importmap">
@@ -76,6 +78,7 @@
 </head>
 <body class="text-slate-900 overflow-x-hidden">
     <div id="root"></div>
+    <!-- Script relativo para compatibilidad total con GitHub y Netlify -->
     <script type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
