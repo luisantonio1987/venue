@@ -1,4 +1,3 @@
-
 export enum UserRole {
   ADMIN_TOTAL = 'ADMIN_TOTAL',
   ADMIN_PARCIAL = 'ADMIN_PARCIAL',
@@ -27,17 +26,7 @@ export interface ActionPermissions {
 }
 
 export interface UserPermissions {
-  dashboard: ActionPermissions;
-  sales: ActionPermissions;
-  orders: ActionPermissions;
-  dispatch: ActionPermissions;
-  returns: ActionPermissions;
-  pendings: ActionPermissions;
-  inventory: ActionPermissions;
-  clients: ActionPermissions;
-  cash: ActionPermissions;
-  system: ActionPermissions;
-  company: ActionPermissions;
+  [key: string]: ActionPermissions;
 }
 
 export interface CompanyData {
@@ -51,7 +40,7 @@ export interface CompanyData {
   phoneMobile: string;
   email: string;
   logoUrl?: string;
-  termsFileUrl?: string;
+  conditionsFileUrl?: string;
 }
 
 export interface Client {
@@ -82,6 +71,15 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  isService?: boolean;
+}
+
+export interface NoveltyItem {
+  productId: string;
+  name: string;
+  quantityAffected: number;
+  replacementPrice: number;
+  resolved: boolean;
 }
 
 export interface PaymentRecord {
@@ -90,8 +88,8 @@ export interface PaymentRecord {
   amount: number;
   received: number;
   change: number;
-  type: 'CONTADO' | 'PARCIAL' | 'CREDITO';
-  method: 'EFECTIVO' | 'CHEQUE' | 'TRANSFERENCIA' | 'DEPOSITO';
+  type: 'CONTADO' | 'PARCIAL' | 'CREDITO' | 'NOVEDAD';
+  method: 'EFECTIVO' | 'CHEQUE' | 'TRANSFERENCIA' | 'DEPOSITO' | 'CREDITO_TOTAL';
   bank?: 'BANCO_AUSTRO' | 'BANCO_GUAYAQUIL';
   checkInfo?: {
     client: string;
@@ -109,7 +107,7 @@ export interface CashTransaction {
   amount: number;
   change: number;
   type: 'INCOME' | 'EXPENSE';
-  category: 'VENTA' | 'CARTERA' | 'GASTO' | 'CAJA_CHICA';
+  category: 'VENTA' | 'CARTERA' | 'GASTO' | 'CAJA_CHICA' | 'REPOSICION';
   reason?: string;
   beneficiary?: string;
   method: string;
@@ -127,6 +125,7 @@ export interface Order {
   eventDateEnd: number;
   rentalDays: number;
   items: OrderItem[];
+  noveltyItems?: NoveltyItem[];
   hasTransport: boolean;
   transportValue: number;
   deliveryAddress?: string;
@@ -140,6 +139,7 @@ export interface Order {
   logisticsType: 'CON_TRANSPORTE' | 'SIN_TRANSPORTE';
   dispatchState?: 'CARGADO' | 'ENTREGADO_BODEGA' | 'ENTREGADO_DOMICILIO';
   nuisances?: string;
+  nuisancesResolved?: boolean;
   payments: PaymentRecord[];
   createdBy: string;
   archivedAt?: number;
@@ -155,13 +155,4 @@ export interface UserAccount {
   mustChangePassword: boolean;
   permissions: UserPermissions;
   createdAt: number;
-}
-
-export interface PushNotification {
-  id: string;
-  title: string;
-  body: string;
-  type: 'ORDER' | 'PAYMENT' | 'INVENTORY' | 'SYSTEM';
-  date: number;
-  read: boolean;
 }

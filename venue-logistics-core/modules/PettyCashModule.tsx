@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { CashTransaction } from '../types';
-import { Banknote, Plus, Trash2, Search, ArrowDownCircle, Check, X, FileDigit } from 'lucide-react';
+import { Banknote, Plus, Trash2, Search, Check, X, FileDigit } from 'lucide-react';
 import Modal, { ModalType } from '../components/Modal';
 
 const PettyCashModule = () => {
@@ -28,6 +27,7 @@ const PettyCashModule = () => {
       return;
     }
     
+    // Regla 11/73: Generar código de 10 dígitos con prefijo CC
     const sequentialId = await dbService.generateSequentialId('CC');
     const expense: CashTransaction = {
       id: sequentialId,
@@ -45,20 +45,7 @@ const PettyCashModule = () => {
     await dbService.add('cash', expense);
     setIsFormOpen(false);
     setFormData({ amount: '', reason: '', beneficiary: '' });
-    setModal({ isOpen: true, type: 'success', title: 'GASTO REGISTRADO', message: `VALE ${sequentialId} GUARDADO CORRECTAMENTE EN EGRESOS DE CAJA.` });
-  };
-
-  const handleDeleteExpense = (e: CashTransaction) => {
-    setModal({
-      isOpen: true,
-      type: 'danger',
-      title: 'ELIMINAR GASTO',
-      message: `¿CONFIRMA QUE DESEA ELIMINAR EL VALE ${e.id}? ESTA ACCIÓN ES PERMANENTE.`,
-      onConfirm: async () => {
-        await dbService.delete('cash', e.id);
-        setModal({ isOpen: true, type: 'success', title: 'ELIMINADO', message: 'EL REGISTRO DE GASTO HA SIDO REMOVIDO.' });
-      }
-    });
+    setModal({ isOpen: true, type: 'success', title: 'EGRESO REGISTRADO', message: `VALE ${sequentialId} GUARDADO CORRECTAMENTE EN EGRESOS DE CAJA.` });
   };
 
   const filtered = expenses.filter(e => 
@@ -73,16 +60,16 @@ const PettyCashModule = () => {
         <div className="flex items-center gap-4">
            <div className="p-4 bg-red-50 text-red-600 rounded-3xl"><Banknote size={24}/></div>
            <div>
-              <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">CAJA CHICA / GASTOS</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">VALES Y PAGOS MENORES</p>
+              <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter leading-none">CAJA CHICA / GASTOS</h2>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">GESTIÓN DE VALES Y PAGOS MENORES</p>
            </div>
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <input type="text" value={search} onChange={e => setSearch(e.target.value.toUpperCase())} placeholder="FILTRAR VALES..." className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[10px] font-black uppercase pr-12 outline-none focus:border-red-500 shadow-inner" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value.toUpperCase())} placeholder="BUSCAR VALE..." className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[10px] font-black uppercase pr-12 outline-none focus:border-red-500 shadow-inner" />
             <Search size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300" />
           </div>
-          <button onClick={() => setIsFormOpen(true)} className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-xl hover:bg-red-700 active:scale-95 transition-all"><Plus size={16}/> REGISTRAR EGRESO</button>
+          <button onClick={() => setIsFormOpen(true)} className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] flex items-center gap-2 shadow-xl hover:bg-red-700 active:scale-95 transition-all"><Plus size={16}/> REGISTRAR GASTO</button>
         </div>
       </div>
 
@@ -93,13 +80,13 @@ const PettyCashModule = () => {
               <div className="space-y-1">
                 <p className="text-[9px] font-black text-slate-400 font-mono tracking-widest">{e.id}</p>
                 <h4 className="font-black text-slate-800 uppercase text-xs truncate max-w-[150px] leading-tight">{e.reason}</h4>
-                <p className="text-[8px] font-bold text-slate-400 uppercase">{e.beneficiary || 'VARIOUS'}</p>
+                <p className="text-[8px] font-bold text-slate-400 uppercase">{e.beneficiary || 'VARIOS'}</p>
               </div>
               <FileDigit className="text-red-100 group-hover:text-red-500 transition-colors" size={24} />
             </div>
             <div className="flex justify-between items-end border-t pt-4 border-slate-50">
                <div><p className="text-[7px] font-black text-slate-300 uppercase">VALOR EGRESO</p><p className="text-xl font-black text-red-600 font-mono">-${e.amount.toFixed(2)}</p></div>
-               <button onClick={() => handleDeleteExpense(e)} className="p-3 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+               <button onClick={() => dbService.delete('cash', e.id)} className="p-3 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Eliminar registro de gasto"><Trash2 size={16}/></button>
             </div>
           </div>
         ))}
@@ -114,9 +101,9 @@ const PettyCashModule = () => {
               <button onClick={() => setIsFormOpen(false)} className="text-slate-400 hover:text-red-600 transition-all"><X size={24} /></button>
             </div>
             <div className="space-y-6">
-              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Valor del Gasto ($)</label><input type="text" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full p-5 bg-slate-50 border-2 rounded-2xl font-black text-2xl text-red-600 text-center outline-none focus:border-red-500 shadow-inner" placeholder="0.00" /></div>
-              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Motivo del Desembolso</label><textarea value={formData.reason} onChange={e => setFormData({...formData, reason: toUpper(e.target.value)})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[11px] font-bold min-h-[100px] outline-none focus:border-red-500 shadow-inner" placeholder="DESCRIBA EL GASTO..." /></div>
-              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Beneficiario / Destino</label><input type="text" value={formData.beneficiary} onChange={e => setFormData({...formData, beneficiary: toUpper(e.target.value)})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-red-500 shadow-inner" placeholder="NOMBRE DE PERSONA O LOCAL" /></div>
+              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Monto del Desembolso ($)</label><input type="text" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} className="w-full p-5 bg-slate-50 border-2 rounded-2xl font-black text-2xl text-red-600 text-center outline-none focus:border-red-500 shadow-inner" placeholder="0.00" /></div>
+              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Concepto / Motivo</label><textarea value={formData.reason} onChange={e => setFormData({...formData, reason: toUpper(e.target.value)})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[11px] font-bold min-h-[100px] outline-none focus:border-red-500 shadow-inner" placeholder="DESCRIBA EL GASTO REALIZADO..." /></div>
+              <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-2 tracking-widest">Beneficiario (Opcional)</label><input type="text" value={formData.beneficiary} onChange={e => setFormData({...formData, beneficiary: toUpper(e.target.value)})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl text-[10px] font-black uppercase outline-none focus:border-red-500 shadow-inner" placeholder="NOMBRE DE PERSONA O LOCAL" /></div>
             </div>
             <button onClick={handleSave} className="w-full py-6 bg-red-600 text-white rounded-[2rem] font-black uppercase text-xs shadow-2xl flex items-center justify-center gap-4 active:scale-95 transition-all">
               <Check size={24} strokeWidth={3} /> CONFIRMAR Y REGISTRAR EGRESO

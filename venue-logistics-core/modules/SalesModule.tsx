@@ -1,21 +1,18 @@
+
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { Client, Product, OrderItem, Order, UserAccount, CompanyData } from '../types';
-import { 
-  X, Check, ShoppingCart, Tag, Truck, Receipt, CalendarDays, UserPlus, Trash2, ArrowRight
-} from 'lucide-react';
+import { X, Check, ShoppingCart, Tag, Truck, Receipt, UserPlus, Trash2, CalendarDays } from 'lucide-react';
 import Modal, { ModalType } from '../components/Modal';
 import PaymentForm from '../components/PaymentForm';
 
-interface OrderFormProps {
-  editOrderId?: string;
+interface SalesModuleProps {
   onSaved: () => void;
-  onCancel: () => void;
   company: CompanyData | null;
   user: UserAccount;
 }
 
-const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, company, user }) => {
+const SalesModule: React.FC<SalesModuleProps> = ({ onSaved, company, user }) => {
   const [activeTab, setActiveTab] = useState<'SALE' | 'PROFORMA'>('SALE');
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -36,40 +33,20 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
   });
   
   const [hasTransport, setHasTransport] = useState(false);
-  const [transportValue, setTransportValue] = useState<string>(''); 
+  const [transportValue, setTransportValue] = useState<string>(''); // Vacio por regla 32
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'NOMINAL'>('PERCENTAGE');
-  const [discountValue, setDiscountValue] = useState<string>(''); 
+  const [discountValue, setDiscountValue] = useState<string>(''); // Vacio por regla 32
   const [applyTax, setApplyTax] = useState(false);
 
   useEffect(() => {
     setClients(dbService.getAll('clients'));
     setProducts(dbService.getAll('products'));
-    
-    if (editOrderId) {
-      const o = dbService.getAll('orders').find((x: Order) => x.id === editOrderId);
-      if (o) {
-        setActiveTab(o.status === 'PROFORMA' ? 'PROFORMA' : 'SALE');
-        const c = dbService.getAll('clients').find((client: Client) => client.id === o.clientId);
-        setSelectedClient(c || null);
-        setItems(o.items || []);
-        setDates({
-          start: new Date(o.eventDateStart).toISOString().split('T')[0],
-          end: new Date(o.eventDateEnd).toISOString().split('T')[0]
-        });
-        setHasTransport(o.hasTransport);
-        setTransportValue(o.transportValue > 0 ? o.transportValue.toString() : '');
-        setDeliveryAddress(o.deliveryAddress || '');
-        setDiscountType(o.discountType);
-        setDiscountValue(o.discountValue > 0 ? o.discountValue.toString() : '');
-        setApplyTax(o.tax > 0);
-      }
-    }
-  }, [editOrderId]);
+  }, []);
 
   const toUpper = (val: string) => (val || '').toUpperCase();
   const parseNum = (val: string) => {
-    if (!val || val === '0' || val === '') return 0;
+    if (!val || val === '' || val === '0') return 0;
     return parseFloat(val.toString().replace(',', '.')) || 0;
   };
 
@@ -80,9 +57,9 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
     return diff > 0 ? diff : 1;
   })();
 
-  const subtotalBruto = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
+  const subtotalBrutoItems = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
   
-  // Regla 1: El descuento se aplicará a todo lo solicitado, a excepción de transporte y servicio de saloneros
+  // Regla 1: Descuento excluye transporte y saloneros
   const discountableSubtotal = items.filter(i => 
     !toUpper(i.name).includes('TRANSPORTE') && !toUpper(i.name).includes('SALONERO')
   ).reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
@@ -90,7 +67,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
   const dVal = parseNum(discountValue);
   const discountAmount = discountType === 'PERCENTAGE' ? (discountableSubtotal * (dVal / 100)) : dVal;
   
-  const baseImponible = Math.max(0, subtotalBruto - discountAmount);
+  const baseImponible = Math.max(0, subtotalBrutoItems - discountAmount);
   const tax = applyTax ? (baseImponible * 0.15) : 0;
   const tVal = parseNum(transportValue);
   const finalTotal = baseImponible + tax + tVal;
@@ -100,118 +77,89 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
     if (existing) {
       setItems(items.map(i => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      setItems([...items, { 
-        productId: p.id, code: p.code, name: p.name, quantity: 1, price: p.rentalPrice
-      }]);
+      setItems([...items, { productId: p.id, code: p.code, name: p.name, quantity: 1, price: p.rentalPrice }]);
     }
   };
 
   const processSave = async () => {
     if (!selectedClient || items.length === 0) {
-      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'VINCULE UN CLIENTE Y ARTÍCULOS PARA CONTINUAR.' });
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'VINCULE UN CLIENTE Y AGREGUE ARTÍCULOS PARA CONTINUAR.' });
       return;
     }
-
+    
     setModal({
       isOpen: true,
       type: 'confirm',
-      title: 'VALIDAR REGISTRO',
-      message: `ESTÁ POR GENERAR UNA ${activeTab === 'SALE' ? 'VENTA DIRECTA' : 'PROFORMA'} POR $${finalTotal.toFixed(2)}. ¿CONFIRMA?`,
+      title: 'CONFIRMAR OPERACIÓN',
+      message: `ESTÁ POR REGISTRAR UNA ${activeTab === 'SALE' ? 'VENTA DIRECTA' : 'PROFORMA'} POR $${finalTotal.toFixed(2)}. ¿CONFIRMA?`,
       onConfirm: async () => {
         const prefix = activeTab === 'PROFORMA' ? 'PR' : 'VE';
-        const sequentialId = editOrderId || await dbService.generateSequentialId(prefix);
-
+        const seqId = await dbService.generateSequentialId(prefix);
         const orderData: Order = {
-          id: sequentialId,
-          clientId: selectedClient.id,
+          id: seqId, 
+          clientId: selectedClient.id, 
           clientName: selectedClient.name,
           status: activeTab === 'PROFORMA' ? 'PROFORMA' : 'CONFIRMADA',
-          orderDate: Date.now(),
+          orderDate: Date.now(), 
           eventDateStart: new Date(dates.start).getTime(),
-          eventDateEnd: new Date(dates.end).getTime(),
-          rentalDays,
-          items,
+          eventDateEnd: new Date(dates.end).getTime(), 
+          rentalDays, 
+          items, 
           hasTransport,
-          transportValue: tVal,
-          deliveryAddress: toUpper(deliveryAddress),
+          transportValue: tVal, 
+          deliveryAddress: toUpper(deliveryAddress), 
           discountType,
-          discountValue: dVal,
-          subtotal: subtotalBruto,
-          tax,
+          discountValue: dVal, 
+          subtotal: subtotalBrutoItems, 
+          tax, 
           total: finalTotal,
-          paidAmount: 0,
+          paidAmount: 0, 
           logisticsType: hasTransport ? 'CON_TRANSPORTE' : 'SIN_TRANSPORTE',
-          payments: [],
+          payments: [], 
           createdBy: user.name
         };
 
-        if (editOrderId) {
-          await dbService.update('orders', editOrderId, orderData);
-          onSaved();
-        } else {
-          await dbService.add('orders', orderData);
-          setSavedOrderRef(orderData);
-          await dbService.sendNotification("Gestión de Pedido", `${activeTab} ${sequentialId} registrada para ${selectedClient.name}`, "ORDER");
-          
-          setModal({
-            isOpen: true,
-            type: 'persuade',
-            title: 'DOCUMENTO GUARDADO',
-            message: 'EL REGISTRO SE HA COMPLETADO. ¿DESEA PROCEDER AL COBRO O SERÁ UNA VENTA A CRÉDITO?',
-            onConfirm: () => setShowPayment(true),
-            onCancelAction: () => onSaved(),
-            confirmLabel: 'REGISTRAR PAGO',
-            cancelLabel: 'A CRÉDITO'
-          });
-        }
+        await dbService.add('orders', orderData);
+        setSavedOrderRef(orderData);
+        await dbService.sendNotification("Pedido Registrado", `${activeTab}: ${seqId} para ${selectedClient.name}`, "ORDER");
+
+        setModal({
+          isOpen: true, 
+          type: 'persuade', 
+          title: 'REGISTRO EXITOSO',
+          message: 'EL DOCUMENTO HA SIDO GUARDADO. ¿DESEA PROCEDER AL COBRO O SERÁ UNA VENTA A CRÉDITO?',
+          onConfirm: () => setShowPayment(true),
+          onCancelAction: () => onSaved(),
+          confirmLabel: 'REGISTRAR PAGO', 
+          cancelLabel: 'A CRÉDITO'
+        });
       }
     });
   };
 
-  if (showPayment && savedOrderRef) {
-    return <PaymentForm order={savedOrderRef} onSaved={onSaved} onCancel={onSaved} />;
-  }
+  if (showPayment && savedOrderRef) return <PaymentForm order={savedOrderRef} onSaved={onSaved} onCancel={onSaved} />;
 
   return (
     <div className="space-y-6 animate-fade-in pb-20 no-scrollbar overflow-x-hidden">
       <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onCancel={modal.onCancelAction} confirmLabel={modal.confirmLabel} cancelLabel={modal.cancelLabel} onClose={() => setModal(p => ({...p, isOpen: false}))} />
-
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-[2.5rem] border shadow-sm gap-4">
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          <button onClick={onCancel} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm"><X size={20}/></button>
-          <div className="flex bg-slate-100 p-1 rounded-2xl border shadow-inner flex-1 md:flex-initial">
-            <button 
-              onClick={() => setActiveTab('SALE')} 
-              className={`flex-1 md:flex-none px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
-            >
-              MODULO VENTA
-            </button>
-            <button 
-              onClick={() => setActiveTab('PROFORMA')} 
-              className={`flex-1 md:flex-none px-8 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
-            >
-              MODULO PROFORMA
-            </button>
-          </div>
+        <div className="flex bg-slate-100 p-1 rounded-2xl border shadow-inner">
+          <button onClick={() => setActiveTab('SALE')} className={`px-12 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}>MÓDULO VENTA</button>
+          <button onClick={() => setActiveTab('PROFORMA')} className={`px-12 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}>MÓDULO PROFORMA</button>
         </div>
-        <button onClick={processSave} className="w-full md:w-auto px-10 py-4 shimmer-bg text-white rounded-2xl font-black uppercase text-[10px] flex items-center justify-center gap-3 shadow-xl active:scale-95 transition-all">
-          <Check size={18}/> FINALIZAR {activeTab === 'SALE' ? 'VENTA' : 'PROFORMA'}
-        </button>
+        <button onClick={processSave} className="px-10 py-4 shimmer-bg text-white rounded-2xl font-black uppercase text-[10px] flex items-center gap-3 shadow-xl active:scale-95 transition-all"><Check size={18}/> FINALIZAR {activeTab === 'SALE' ? 'VENTA' : 'PROFORMA'}</button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 lg:p-8 rounded-[3rem] border shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="relative">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">CLIENTE SOLICITANTE</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">CLIENTE</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <input type="text" value={selectedClient ? selectedClient.name : searchClient} 
-                      onChange={e => { setSearchClient(toUpper(e.target.value)); setSelectedClient(null); setIsClientListOpen(true); }}
-                      className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-black text-xs uppercase focus:border-blue-500 outline-none transition-all shadow-inner"
-                      placeholder="BUSCAR CLIENTE..."
-                    />
+                    <input type="text" value={selectedClient ? selectedClient.name : searchClient} onChange={e => { setSearchClient(toUpper(e.target.value)); setSelectedClient(null); setIsClientListOpen(true); }} className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-black text-xs uppercase outline-none focus:border-blue-500 shadow-inner" placeholder="BUSCAR CLIENTE..." />
                     {isClientListOpen && !selectedClient && (
                       <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-2xl shadow-2xl z-50 max-h-48 overflow-y-auto no-scrollbar">
                         {clients.filter(c => c.name.toUpperCase().includes(searchClient.toUpperCase())).map(c => (
@@ -224,34 +172,28 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA INICIO</label>
-                  <input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA RETORNO</label>
-                  <input type="date" value={dates.end} min={dates.start} onChange={e => setDates({...dates, end: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" />
-                </div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">INICIO</label><input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">RETORNO</label><input type="date" value={dates.end} min={dates.start} onChange={e => setDates({...dates, end: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none" /></div>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b pb-4">
-                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3"><ShoppingCart size={18} className="text-blue-600"/> DETALLE DE MENAJE Y SERVICIOS</h3>
-                <span className="bg-blue-50 text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-tighter">{rentalDays} DÍA(S) ALQUILER</span>
+                <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3"><ShoppingCart size={18} className="text-blue-600"/> DETALLE DE MOBILIARIO Y MENAJE</h3>
+                <span className="bg-blue-50 text-blue-600 px-5 py-2 rounded-full text-[10px] font-black uppercase">{rentalDays} DÍA(S) ALQUILER</span>
               </div>
               <select onChange={e => { const p = products.find(x => x.id === e.target.value); if(p) handleAddItem(p); e.target.value = ""; }} className="w-full p-5 bg-slate-900 text-white rounded-3xl font-black text-sm shadow-xl cursor-pointer hover:bg-black transition-all">
                 <option value="">＋ AÑADIR ARTÍCULO AL DETALLE...</option>
                 {products.map(p => <option key={p.id} value={p.id} className="bg-white text-slate-800 uppercase">{p.name} - ${p.rentalPrice.toFixed(2)}</option>)}
               </select>
               <div className="border rounded-[2.5rem] overflow-hidden bg-white shadow-inner overflow-x-auto no-scrollbar">
-                <table className="w-full text-left min-w-[600px]">
+                <table className="w-full text-left">
                   <thead className="bg-slate-50 border-b text-[9px] font-black text-slate-400 uppercase tracking-widest">
                     <tr>
-                      <th className="px-8 py-5">ARTÍCULO</th>
+                      <th className="px-8 py-5">DESCRIPCIÓN ARTÍCULO</th>
                       <th className="px-4 py-5 text-center">CANT.</th>
-                      <th className="px-4 py-5 text-center">PRECIO ($)</th>
-                      <th className="px-8 py-5 text-right">SUBTOTAL</th>
+                      <th className="px-4 py-5 text-center">P. UNIT ($)</th>
+                      <th className="px-8 py-5 text-right">TOTAL ({rentalDays} D.)</th>
                       <th className="w-16"></th>
                     </tr>
                   </thead>
@@ -278,10 +220,10 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
 
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6 sticky top-24 max-h-[85vh] overflow-y-auto no-scrollbar flex flex-col">
-            <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-3 border-b pb-5 shrink-0"><Receipt size={20} className="text-blue-600"/> LIQUIDACIÓN FINANCIERA</h3>
+            <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-3 border-b pb-5 shrink-0"><Receipt size={20} className="text-blue-600"/> LIQUIDACIÓN DE VENTA</h3>
             <div className="space-y-4 flex-1">
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${hasTransport ? 'bg-blue-50 border-blue-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
-                <label className="flex items-center gap-3 cursor-pointer group">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${hasTransport ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-300'}`}>
                     {hasTransport && <Check size={14} className="text-white" strokeWidth={3}/>}
                     <input type="checkbox" checked={hasTransport} onChange={e => setHasTransport(e.target.checked)} className="hidden" />
@@ -291,13 +233,14 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                 {hasTransport && (
                   <div className="mt-5 space-y-4 animate-scale-in">
                     <input type="text" value={transportValue} onChange={e => setTransportValue(e.target.value)} placeholder="VALOR TRANSPORTE" className="w-full p-4 bg-white border-2 rounded-2xl font-black text-xs text-blue-700 outline-none shadow-inner" />
-                    <textarea value={deliveryAddress} onChange={e => setDeliveryAddress(toUpper(e.target.value))} placeholder="DIRECCIÓN DE ENTREGA..." className="w-full p-4 bg-white border-2 rounded-2xl text-[10px] font-bold min-h-[100px] outline-none shadow-inner" />
+                    <textarea value={deliveryAddress} onChange={e => setDeliveryAddress(toUpper(e.target.value))} placeholder="DIRECCIÓN DE ENTREGA..." className="w-full p-4 bg-white border-2 rounded-2xl text-[10px] font-bold min-h-[80px] outline-none shadow-inner" />
                   </div>
                 )}
               </div>
+
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${parseNum(discountValue) > 0 ? 'bg-amber-50 border-amber-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="EXCLUYE TRANSPORTE Y SERVICIO DE SALONEROS"><Tag size={16}/> DESCUENTO</span>
+                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="REGLA 1: EXCLUYE TRANSPORTE Y SALONEROS"><Tag size={16}/> DESCUENTO</span>
                   <div className="flex bg-white rounded-xl p-1 border shadow-sm">
                     <button onClick={() => setDiscountType('PERCENTAGE')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'PERCENTAGE' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>%</button>
                     <button onClick={() => setDiscountType('NOMINAL')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'NOMINAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>$</button>
@@ -305,6 +248,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                 </div>
                 <input type="text" value={discountValue} onChange={e => setDiscountValue(e.target.value)} placeholder="0.00" className="w-full p-4 bg-white border-2 rounded-2xl font-black text-xs text-amber-800 outline-none shadow-inner" />
               </div>
+
               <div className={`p-5 rounded-[2rem] border-2 transition-all flex items-center gap-4 ${applyTax ? 'bg-indigo-50 border-indigo-200 shadow-inner' : 'bg-slate-50 border-transparent'}`}>
                 <div onClick={() => setApplyTax(!applyTax)} className={`w-12 h-6 rounded-full relative transition-all cursor-pointer ${applyTax ? 'bg-indigo-600 shadow-inner' : 'bg-slate-300'}`}>
                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all shadow-md ${applyTax ? 'left-7' : 'left-1'}`} />
@@ -312,8 +256,9 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                 <span className="text-[11px] font-black uppercase text-indigo-800">GRAVAR IVA 15%</span>
               </div>
             </div>
+
             <div className="pt-8 border-t-4 border-dashed border-slate-100 space-y-4 shrink-0">
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>SUBTOTAL BRUTO</span><span>${subtotalBruto.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>SUBTOTAL BRUTO</span><span>${subtotalBrutoItems.toFixed(2)}</span></div>
               <div className="flex justify-between text-[10px] font-black text-amber-600 uppercase tracking-widest"><span>DESCUENTO</span><span>-${discountAmount.toFixed(2)}</span></div>
               <div className="flex justify-between text-[10px] font-black text-indigo-600 uppercase tracking-widest"><span>IVA 15%</span><span>+${tax.toFixed(2)}</span></div>
               <div className="pt-8 border-t-8 border-slate-900 mt-6 relative overflow-hidden rounded-3xl shadow-lg">
@@ -331,4 +276,4 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
   );
 };
 
-export default OrderForm;
+export default SalesModule;
