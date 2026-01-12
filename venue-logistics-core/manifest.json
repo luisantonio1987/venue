@@ -1,22 +1,24 @@
-
 {
+  "name": "Venue Logistics Core",
   "short_name": "VenueLog",
-  "name": "Venue Logistics - Sistema Integral de Gestión",
+  "description": "Sistema de Gestión Integral para Renta de Eventos",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e40af",
+  "orientation": "any",
   "icons": [
     {
-      "src": "https://picsum.photos/192/192?random=venue1",
+      "src": "https://picsum.photos/192/192?random=logo192",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "192x192"
+      "purpose": "any maskable"
     },
     {
-      "src": "https://picsum.photos/512/512?random=venue2",
+      "src": "https://picsum.photos/512/512?random=logo512",
+      "sizes": "512x512",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any maskable"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#1e40af",
-  "background_color": "#f8fafc",
-  "orientation": "any"
+  ]
 }

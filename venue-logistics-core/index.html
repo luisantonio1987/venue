@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#1e40af">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Venue Logistics - Sistema Integral</title>
-    <link rel="manifest" href="manifest.json">
+    <title>Venue Logistics - Core v5.0</title>
+    <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <script>
@@ -19,7 +19,6 @@
               'scale-in': 'scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               'shimmer': 'shimmer 2s infinite linear',
               'pulse-latent': 'pulseLatent 2s infinite ease-in-out',
-              'spin-slow': 'spin 8s linear infinite',
             },
             keyframes: {
               fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -27,7 +26,7 @@
               shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
               pulseLatent: {
                 '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)', boxShadow: '0 0 0px rgba(59, 130, 246, 0)' },
-                '50%': { transform: 'scale(1.02)', filter: 'brightness(1.1)', boxShadow: '0 0 20px rgba(59, 130, 246, 0.4)' }
+                '50%': { transform: 'scale(1.02)', filter: 'brightness(1.1)', boxShadow: '0 0 25px rgba(59, 130, 246, 0.5)' }
               }
             }
           }
@@ -48,8 +47,10 @@
           text-transform: uppercase !important; 
         }
         
-        input, select, textarea { font-size: 16px !important; }
-        
+        /* Regla 32: Evitar valores (0) visuales molestos */
+        input[type="number"]::-webkit-inner-spin-button, 
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
         @media print {
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
@@ -58,14 +59,8 @@
         }
         .print-only { display: none; }
 
-        /* Regla 86: Botones siempre visibles */
-        .action-button-container {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-          opacity: 1 !important;
-          visibility: visible !important;
-        }
+        /* Regla 86/89: Botones siempre visibles en móvil */
+        .action-container { display: flex; flex-wrap: wrap; gap: 0.5rem; opacity: 1 !important; visibility: visible !important; }
     </style>
 <script type="importmap">
 {
@@ -81,6 +76,7 @@
 </head>
 <body class="text-slate-900 overflow-x-hidden">
     <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
 </html>

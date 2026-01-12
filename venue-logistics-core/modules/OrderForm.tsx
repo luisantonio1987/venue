@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { Client, Product, OrderItem, Order, UserAccount, CompanyData } from '../types';
 import { 
-  X, Check, ShoppingCart, Tag, Truck, Receipt, UserPlus, Trash2, ArrowRight
+  X, Check, ShoppingCart, Tag, Truck, Receipt, UserPlus, Trash2, CalendarDays
 } from 'lucide-react';
 import Modal, { ModalType } from '../components/Modal';
 import PaymentForm from '../components/PaymentForm';
@@ -47,7 +47,8 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
     setProducts(dbService.getAll('products'));
     
     if (editOrderId) {
-      const o = dbService.getAll('orders').find((x: Order) => x.id === editOrderId);
+      const orders = dbService.getAll('orders');
+      const o = orders.find((x: Order) => x.id === editOrderId);
       if (o) {
         setActiveTab(o.status === 'PROFORMA' ? 'PROFORMA' : 'SALE');
         const c = dbService.getAll('clients').find((client: Client) => client.id === o.clientId);
@@ -69,7 +70,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
 
   const toUpper = (val: string) => (val || '').toUpperCase();
   const parseNum = (val: string) => {
-    if (!val || val === '0' || val === '') return 0;
+    if (!val || val === '' || val === '0') return 0;
     return parseFloat(val.toString().replace(',', '.')) || 0;
   };
 
@@ -80,7 +81,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
     return diff > 0 ? diff : 1;
   })();
 
-  const subtotalBruto = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
+  const subtotalBrutoItems = items.reduce((sum, i) => sum + (i.price * i.quantity), 0) * rentalDays;
   
   // Regla 1: Descuento excluye transporte y saloneros
   const discountableSubtotal = items.filter(i => 
@@ -90,7 +91,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
   const dVal = parseNum(discountValue);
   const discountAmount = discountType === 'PERCENTAGE' ? (discountableSubtotal * (dVal / 100)) : dVal;
   
-  const baseImponible = Math.max(0, subtotalBruto - discountAmount);
+  const baseImponible = Math.max(0, subtotalBrutoItems - discountAmount);
   const tax = applyTax ? (baseImponible * 0.15) : 0;
   const tVal = parseNum(transportValue);
   const finalTotal = baseImponible + tax + tVal;
@@ -100,82 +101,77 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
     if (existing) {
       setItems(items.map(i => i.productId === p.id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      setItems([...items, { 
-        productId: p.id, code: p.code, name: p.name, quantity: 1, price: p.rentalPrice
-      }]);
+      setItems([...items, { productId: p.id, code: p.code, name: p.name, quantity: 1, price: p.rentalPrice }]);
     }
   };
 
   const processSave = async () => {
     if (!selectedClient || items.length === 0) {
-      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'VINCULE UN CLIENTE Y ARTÍCULOS PARA CONTINUAR.' });
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'VINCULE UN CLIENTE Y AGREGUE ARTÍCULOS PARA CONTINUAR.' });
       return;
     }
-
+    
     setModal({
       isOpen: true,
       type: 'confirm',
-      title: 'VALIDAR REGISTRO',
-      message: `ESTÁ POR GENERAR UNA ${activeTab === 'SALE' ? 'VENTA DIRECTA' : 'PROFORMA'} POR $${finalTotal.toFixed(2)}. ¿CONFIRMA?`,
+      title: 'CONFIRMAR OPERACIÓN',
+      message: `ESTÁ POR REGISTRAR UNA ${activeTab === 'SALE' ? 'VENTA DIRECTA' : 'PROFORMA'} POR $${finalTotal.toFixed(2)}. ¿CONFIRMA?`,
       onConfirm: async () => {
         const prefix = activeTab === 'PROFORMA' ? 'PR' : 'VE';
-        const sequentialId = editOrderId || await dbService.generateSequentialId(prefix);
-
+        const seqId = editOrderId || await dbService.generateSequentialId(prefix);
         const orderData: Order = {
-          id: sequentialId,
-          clientId: selectedClient.id,
+          id: seqId, 
+          clientId: selectedClient.id, 
           clientName: selectedClient.name,
           status: activeTab === 'PROFORMA' ? 'PROFORMA' : 'CONFIRMADA',
-          orderDate: Date.now(),
+          orderDate: Date.now(), 
           eventDateStart: new Date(dates.start).getTime(),
-          eventDateEnd: new Date(dates.end).getTime(),
-          rentalDays,
-          items,
+          eventDateEnd: new Date(dates.end).getTime(), 
+          rentalDays, 
+          items, 
           hasTransport,
-          transportValue: tVal,
-          deliveryAddress: toUpper(deliveryAddress),
+          transportValue: tVal, 
+          deliveryAddress: toUpper(deliveryAddress), 
           discountType,
-          discountValue: dVal,
-          subtotal: subtotalBruto,
-          tax,
+          discountValue: dVal, 
+          subtotal: subtotalBrutoItems, 
+          tax, 
           total: finalTotal,
-          paidAmount: 0,
+          paidAmount: 0, 
           logisticsType: hasTransport ? 'CON_TRANSPORTE' : 'SIN_TRANSPORTE',
-          payments: [],
+          payments: [], 
           createdBy: user.name
         };
 
         if (editOrderId) {
-          await dbService.update('orders', editOrderId, orderData);
-          onSaved();
+            await dbService.update('orders', editOrderId, orderData);
+            onSaved();
         } else {
-          await dbService.add('orders', orderData);
-          setSavedOrderRef(orderData);
-          await dbService.sendNotification("Gestión de Pedido", `${activeTab} ${sequentialId} registrada para ${selectedClient.name}`, "ORDER");
-          
-          setModal({
-            isOpen: true,
-            type: 'persuade',
-            title: 'DOCUMENTO GUARDADO',
-            message: 'EL REGISTRO SE HA COMPLETADO. ¿DESEA PROCEDER AL COBRO O SERÁ UNA VENTA A CRÉDITO?',
-            onConfirm: () => setShowPayment(true),
-            onCancelAction: () => onSaved(),
-            confirmLabel: 'REGISTRAR PAGO',
-            cancelLabel: 'A CRÉDITO'
-          });
+            await dbService.add('orders', orderData);
+            setSavedOrderRef(orderData);
+            await dbService.sendNotification("Pedido Registrado", `${activeTab}: ${seqId} para ${selectedClient.name}`, "ORDER");
+
+            setModal({
+                isOpen: true, 
+                type: 'persuade', 
+                title: 'REGISTRO EXITOSO',
+                message: 'EL DOCUMENTO HA SIDO GUARDADO. ¿DESEA PROCEDER AL COBRO O SERÁ UNA VENTA A CRÉDITO?',
+                onConfirm: () => setShowPayment(true),
+                onCancelAction: () => onSaved(),
+                confirmLabel: 'REGISTRAR PAGO', 
+                cancelLabel: 'A CRÉDITO'
+            });
         }
       }
     });
   };
 
-  if (showPayment && savedOrderRef) {
-    return <PaymentForm order={savedOrderRef} onSaved={onSaved} onCancel={onSaved} />;
-  }
+  if (showPayment && savedOrderRef) return <PaymentForm order={savedOrderRef} onSaved={onSaved} onCancel={onSaved} />;
 
   return (
     <div className="space-y-6 animate-fade-in pb-20 no-scrollbar overflow-x-hidden">
       <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onCancel={modal.onCancelAction} confirmLabel={modal.confirmLabel} cancelLabel={modal.cancelLabel} onClose={() => setModal(p => ({...p, isOpen: false}))} />
-
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-[2.5rem] border shadow-sm gap-4">
         <div className="flex items-center gap-4 w-full md:w-auto">
           <button onClick={onCancel} className="p-3 bg-slate-50 rounded-2xl text-slate-400 hover:text-red-500 transition-all shadow-sm"><X size={20}/></button>
@@ -183,15 +179,15 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
             {/* Regla 1: Pulsación latente en pestaña activa */}
             <button 
               onClick={() => setActiveTab('SALE')} 
-              className={`flex-1 md:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
+              className={`flex-1 md:flex-none px-12 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'SALE' ? 'bg-white text-blue-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
             >
-              MÓDULO VENTA
+              VENTAS
             </button>
             <button 
               onClick={() => setActiveTab('PROFORMA')} 
-              className={`flex-1 md:flex-none px-8 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
+              className={`flex-1 md:flex-none px-12 py-3 rounded-xl text-[10px] font-black uppercase transition-all ${activeTab === 'PROFORMA' ? 'bg-white text-amber-600 shadow-md animate-pulse-latent' : 'text-slate-400'}`}
             >
-              MÓDULO PROFORMA
+              PROFORMAS
             </button>
           </div>
         </div>
@@ -202,17 +198,13 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-white p-6 lg:p-8 rounded-[3rem] border shadow-sm space-y-8">
+          <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="relative">
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">CLIENTE SOLICITANTE</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <input type="text" value={selectedClient ? selectedClient.name : searchClient} 
-                      onChange={e => { setSearchClient(toUpper(e.target.value)); setSelectedClient(null); setIsClientListOpen(true); }}
-                      className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-black text-xs uppercase focus:border-blue-500 outline-none transition-all shadow-inner"
-                      placeholder="BUSCAR CLIENTE..."
-                    />
+                    <input type="text" value={selectedClient ? selectedClient.name : searchClient} onChange={e => { setSearchClient(toUpper(e.target.value)); setSelectedClient(null); setIsClientListOpen(true); }} className="w-full p-4 bg-slate-50 border-2 border-slate-50 rounded-2xl font-black text-xs uppercase outline-none focus:border-blue-500 shadow-inner" placeholder="BUSCAR CLIENTE..." />
                     {isClientListOpen && !selectedClient && (
                       <div className="absolute top-full left-0 right-0 mt-2 bg-white border rounded-2xl shadow-2xl z-50 max-h-48 overflow-y-auto no-scrollbar">
                         {clients.filter(c => c.name.toUpperCase().includes(searchClient.toUpperCase())).map(c => (
@@ -225,14 +217,8 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA INICIO</label>
-                  <input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA RETORNO</label>
-                  <input type="date" value={dates.end} min={dates.start} onChange={e => setDates({...dates, end: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" />
-                </div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA INICIO</label><input type="date" value={dates.start} onChange={e => setDates({...dates, start: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" /></div>
+                <div><label className="text-[10px] font-black text-slate-400 uppercase ml-1 mb-2 block">FECHA RETORNO</label><input type="date" value={dates.end} min={dates.start} onChange={e => setDates({...dates, end: e.target.value})} className="w-full p-4 bg-slate-50 border-2 rounded-2xl font-black text-xs outline-none focus:border-blue-500 shadow-inner" /></div>
               </div>
             </div>
 
@@ -264,7 +250,6 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
                           <input type="text" value={item.quantity === 0 ? '' : item.quantity} onChange={e => setItems(items.map(i => i.productId === item.productId ? {...i, quantity: parseInt(e.target.value.replace(/\D/g,'')) || 0} : i))} className="w-14 p-2 bg-slate-50 border-2 rounded-xl text-center font-black" />
                         </td>
                         <td className="px-4 py-5 text-center">
-                          {/* Regla: Se puede modificar los precios en el formulario */}
                           <input type="text" value={item.price === 0 ? '' : item.price} onChange={e => setItems(items.map(i => i.productId === item.productId ? {...i, price: parseNum(e.target.value)} : i))} className="w-20 p-2 bg-slate-50 border-2 rounded-xl text-center font-black text-blue-600" />
                         </td>
                         <td className="px-8 py-5 text-right font-black text-slate-900">${(item.price * item.quantity * rentalDays).toFixed(2)}</td>
@@ -282,7 +267,6 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
           <div className="bg-white p-8 rounded-[3rem] border shadow-sm space-y-6 sticky top-24 max-h-[85vh] overflow-y-auto no-scrollbar flex flex-col">
             <h3 className="text-[12px] font-black uppercase text-slate-800 tracking-[0.2em] flex items-center gap-3 border-b pb-5 shrink-0"><Receipt size={20} className="text-blue-600"/> LIQUIDACIÓN FINANCIERA</h3>
             <div className="space-y-4 flex-1">
-              {/* Regla 48/50: Mejora visual de liquidación sin recortes */}
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${hasTransport ? 'bg-blue-50 border-blue-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
                 <label className="flex items-center gap-3 cursor-pointer group">
                   <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${hasTransport ? 'bg-blue-600 border-blue-600 shadow-md' : 'bg-white border-slate-300'}`}>
@@ -300,7 +284,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
               </div>
               <div className={`p-5 rounded-[2rem] border-2 transition-all ${parseNum(discountValue) > 0 ? 'bg-amber-50 border-amber-200 shadow-inner' : 'bg-slate-50 border-transparent opacity-60'}`}>
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="REGLA 1: EXCLUYE TRANSPORTE Y SALONEROS EN EL CÁLCULO"><Tag size={16}/> DESCUENTO</span>
+                  <span className="text-[11px] font-black text-amber-800 uppercase flex items-center gap-2" title="EXCLUYE TRANSPORTE Y SERVICIO DE SALONEROS"><Tag size={16}/> DESCUENTO</span>
                   <div className="flex bg-white rounded-xl p-1 border shadow-sm">
                     <button onClick={() => setDiscountType('PERCENTAGE')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'PERCENTAGE' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>%</button>
                     <button onClick={() => setDiscountType('NOMINAL')} className={`px-3 py-1 rounded-lg text-[10px] font-black ${discountType === 'NOMINAL' ? 'bg-amber-600 text-white shadow-md' : 'text-amber-600'}`}>$</button>
@@ -316,7 +300,7 @@ const OrderForm: React.FC<OrderFormProps> = ({ editOrderId, onSaved, onCancel, c
               </div>
             </div>
             <div className="pt-8 border-t-4 border-dashed border-slate-100 space-y-4 shrink-0">
-              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>SUBTOTAL BRUTO</span><span>${subtotalBruto.toFixed(2)}</span></div>
+              <div className="flex justify-between text-[10px] font-black text-slate-400 uppercase tracking-widest"><span>SUBTOTAL BRUTO</span><span>${subtotalBrutoItems.toFixed(2)}</span></div>
               <div className="flex justify-between text-[10px] font-black text-amber-600 uppercase tracking-widest"><span>DESCUENTO</span><span>-${discountAmount.toFixed(2)}</span></div>
               <div className="flex justify-between text-[10px] font-black text-indigo-600 uppercase tracking-widest"><span>IVA 15%</span><span>+${tax.toFixed(2)}</span></div>
               <div className="pt-8 border-t-8 border-slate-900 mt-6 relative overflow-hidden rounded-3xl shadow-lg">

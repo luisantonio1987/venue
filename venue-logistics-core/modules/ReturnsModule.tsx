@@ -195,19 +195,13 @@ const ReturnsModule = () => {
                  <p className="text-[9px] font-black text-slate-700 leading-none">{new Date(o.eventDateEnd).toLocaleDateString('es-EC')}</p>
                </div>
             </div>
-            {/* Regla 86: Botones siempre visibles */}
-            <div className="flex gap-2 pt-2 action-button-container">
+            {/* Regla 86/89: Botones siempre visibles */}
+            <div className="flex gap-2 pt-2 action-container">
               <button onClick={() => handleReturnAction(o, 'PARTIAL')} className="flex-1 py-3.5 bg-white text-red-600 border border-red-100 rounded-2xl font-black uppercase text-[9px] flex items-center justify-center gap-2 hover:bg-red-50 shadow-sm transition-all"><AlertTriangle size={14}/> NOVEDAD</button>
               <button onClick={() => handleReturnAction(o, 'TOTAL')} className="flex-1 py-3.5 bg-emerald-600 text-white rounded-2xl font-black uppercase text-[9px] shadow-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 active:scale-95"><CheckCircle2 size={16}/> RETIRO OK</button>
             </div>
           </div>
         ))}
-        {filtered.length === 0 && (
-          <div className="col-span-full py-24 text-center border-2 border-dashed rounded-[3rem] space-y-4">
-             <PackageOpen className="mx-auto text-slate-200" size={60} />
-             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">SIN PEDIDOS POR RECOLECTAR</p>
-          </div>
-        )}
       </div>
     </div>
   );
