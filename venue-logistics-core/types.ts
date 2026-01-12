@@ -71,7 +71,6 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
-  isService?: boolean;
 }
 
 export interface NoveltyItem {

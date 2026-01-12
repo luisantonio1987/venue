@@ -45,7 +45,7 @@ const InventoryModule = () => {
 
   const handleSave = async () => {
     if(!formData.name) {
-      setModal({ isOpen: true, type: 'warning', title: 'CAMPOS OBLIGATORIOS', message: 'EL NOMBRE ES REQUERIDO.' });
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'EL NOMBRE ES OBLIGATORIO.' });
       return;
     }
     
@@ -53,7 +53,7 @@ const InventoryModule = () => {
       isOpen: true,
       type: 'confirm',
       title: 'VALIDAR REGISTRO',
-      message: editingProduct ? `¿GUARDAR CAMBIOS EN ${formData.name.toUpperCase()}?` : `¿REGISTRAR ${formData.name.toUpperCase()} EN EL CATÁLOGO?`,
+      message: editingProduct ? `¿GUARDAR CAMBIOS EN ${formData.name.toUpperCase()}?` : `¿REGISTRAR ${formData.name.toUpperCase()}?`,
       onConfirm: async () => {
         const data = { 
           ...formData, 
@@ -78,7 +78,7 @@ const InventoryModule = () => {
           });
         }
         closeForm();
-        setModal({ isOpen: true, type: 'success', title: 'OPERACIÓN EXITOSA', message: 'EL PRODUCTO HA SIDO PROCESADO.', autoClose: 1500 });
+        setModal({ isOpen: true, type: 'success', title: 'OPERACIÓN EXITOSA', message: 'CATÁLOGO ACTUALIZADO.', autoClose: 1500 });
       }
     });
   };
@@ -92,7 +92,7 @@ const InventoryModule = () => {
     if (type === 'BAJA') {
       const qty = Math.abs(adjust);
       if(qty > product.stock) {
-        setModal({ isOpen: true, type: 'danger', title: 'ERROR DE STOCK', message: 'LA CANTIDAD EXCEDE EL INVENTARIO ACTUAL.' });
+        setModal({ isOpen: true, type: 'danger', title: 'ERROR DE STOCK', message: 'LA CANTIDAD SUPERA EL INVENTARIO ACTUAL.' });
         return;
       }
       await dbService.update('products', product.id, { 
@@ -107,7 +107,7 @@ const InventoryModule = () => {
     }
 
     setAdjustModal({ ...adjustModal, isOpen: false, value: '' });
-    setModal({ isOpen: true, type: 'success', title: 'STOCK ACTUALIZADO', message: 'EL CAMBIO HA SIDO REGISTRADO EN EL HISTORIAL.', autoClose: 1500 });
+    setModal({ isOpen: true, type: 'success', title: 'STOCK ACTUALIZADO', message: 'EL MOVIMIENTO HA SIDO REGISTRADO.', autoClose: 1500 });
   };
 
   const closeForm = () => {
@@ -120,20 +120,6 @@ const InventoryModule = () => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleBulkDelete = () => {
-    setModal({
-      isOpen: true,
-      type: 'danger',
-      title: 'BORRADO MASIVO',
-      message: `¿CONFIRMA ELIMINAR LOS ${selectedIds.length} ÍTEMS SELECCIONADOS?`,
-      onConfirm: async () => {
-        await dbService.deleteMultiple('products', selectedIds);
-        setSelectedIds([]);
-        setModal({ isOpen: true, type: 'success', title: 'COMPLETADO', message: 'PRODUCTOS ELIMINADOS.', autoClose: 1500 });
-      }
-    });
-  };
-
   const filtered = products.filter(p => 
     (p.name || '').toUpperCase().includes(search.toUpperCase()) || 
     (p.code || '').toUpperCase().includes(search.toUpperCase())
@@ -143,15 +129,14 @@ const InventoryModule = () => {
     <div className="space-y-6 animate-fade-in pb-24 no-scrollbar relative">
       <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} autoClose={modal.autoClose} onClose={() => setModal(p => ({...p, isOpen: false}))} />
 
-      {/* Regla 88: Modal personalizado para ajuste en lugar de nativo */}
       {adjustModal.isOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-sm p-10 space-y-6 animate-scale-in border-t-[12px] border-blue-600">
               <div className="text-center space-y-2">
                  <h3 className="text-lg font-black uppercase text-slate-800 tracking-tighter leading-none">{adjustModal.type === 'STOCK' ? 'REAJUSTAR STOCK' : 'DAR DE BAJA'}</h3>
-                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">{adjustModal.product?.name}</p>
+                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none truncate">{adjustModal.product?.name}</p>
               </div>
-              <input type="number" value={adjustModal.value} onChange={e => setAdjustModal({...adjustModal, value: e.target.value})} className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-4xl outline-none focus:border-blue-500 shadow-inner" placeholder="0" />
+              <input type="number" value={adjustModal.value} onChange={e => setAdjustModal({...adjustModal, value: e.target.value})} className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-4xl outline-none focus:border-blue-500" placeholder="0" />
               <div className="grid grid-cols-2 gap-3">
                  <button onClick={() => setAdjustModal({...adjustModal, isOpen: false, value: ''})} className="py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px]">CANCELAR</button>
                  <button onClick={processAdjustment} className="py-4 shimmer-bg text-white rounded-2xl font-black uppercase text-[10px] shadow-lg">PROCEDER</button>
@@ -164,7 +149,7 @@ const InventoryModule = () => {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
            <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl p-10 space-y-6 animate-scale-in border-t-[12px] border-blue-600 flex flex-col max-h-[80vh]">
               <div className="flex justify-between items-center border-b pb-4 shrink-0">
-                 <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest">HISTORIAL: {showHistory.name}</h3>
+                 <h3 className="font-black text-slate-800 uppercase text-xs">HISTORIAL: {showHistory.name}</h3>
                  <button onClick={() => setShowHistory(null)} className="text-slate-300 hover:text-red-500 transition-all"><X size={24}/></button>
               </div>
               <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 py-2">
@@ -186,94 +171,80 @@ const InventoryModule = () => {
         </div>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-48">
-            <input type="text" value={search} onChange={e => setSearch(e.target.value.toUpperCase())} placeholder="FILTRAR..." className="w-full p-3 bg-slate-50 border rounded-xl text-[10px] font-black uppercase pr-10 outline-none shadow-inner focus:border-blue-500" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value.toUpperCase())} placeholder="FILTRAR..." className="w-full p-3 bg-slate-50 border rounded-xl text-[10px] font-black uppercase pr-10 outline-none" />
             <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300" />
           </div>
-          <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 shimmer-bg text-white rounded-xl font-black uppercase text-[10px] flex items-center gap-2 shadow-lg active:scale-95 transition-all"><Plus size={16}/> NUEVO PRODUCTO</button>
+          <button onClick={() => setIsFormOpen(true)} className="px-6 py-3 shimmer-bg text-white rounded-xl font-black uppercase text-[10px] flex items-center gap-2 shadow-lg"><Plus size={16}/> NUEVO PRODUCTO</button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {filtered.map(p => (
           <div key={p.id} className={`bg-white rounded-[2.5rem] border shadow-sm p-6 space-y-4 hover:shadow-lg transition-all relative overflow-hidden group ${selectedIds.includes(p.id) ? 'ring-4 ring-blue-500' : ''}`}>
-            {/* Regla 85: Selección múltiple */}
-            <button onClick={() => toggleSelect(p.id)} className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-xl border transition-all active:scale-90">
+            <button onClick={() => toggleSelect(p.id)} className="absolute top-4 right-4 z-10 p-2 bg-white/80 rounded-xl border">
               {selectedIds.includes(p.id) ? <CheckSquare size={18} className="text-blue-600"/> : <Square size={18} className="text-slate-200"/>}
             </button>
             <div className="aspect-square bg-slate-50 rounded-[2rem] overflow-hidden flex items-center justify-center relative">
               {p.imageUrl ? <img src={p.imageUrl} className="w-full h-full object-cover" /> : <Box size={40} className="text-slate-200" />}
-              <div className="absolute bottom-4 left-4 right-4 flex gap-2 translate-y-12 group-hover:translate-y-0 transition-transform action-button-container">
+              <div className="absolute bottom-4 left-4 right-4 flex gap-2 translate-y-12 group-hover:translate-y-0 transition-transform">
                  <button onClick={() => setAdjustModal({ isOpen: true, type: 'STOCK', product: p, value: '' })} className="flex-1 py-2 bg-white/90 backdrop-blur text-blue-600 rounded-xl font-black text-[8px] uppercase shadow-sm flex items-center justify-center gap-1"><RefreshCcw size={10}/> REAJUSTE</button>
                  <button onClick={() => setAdjustModal({ isOpen: true, type: 'BAJA', product: p, value: '' })} className="flex-1 py-2 bg-white/90 backdrop-blur text-red-600 rounded-xl font-black text-[8px] uppercase shadow-sm flex items-center justify-center gap-1"><MinusCircle size={10}/> BAJA</button>
               </div>
             </div>
             <div>
               <div className="flex justify-between items-start">
-                 <div><p className="text-[8px] font-black text-blue-500 uppercase tracking-widest leading-none mb-1">{p.code}</p><h3 className="font-black text-slate-800 uppercase text-xs leading-tight line-clamp-1">{p.name}</h3></div>
+                 <div><p className="text-[8px] font-black text-blue-500 uppercase tracking-widest">{p.code}</p><h3 className="font-black text-slate-800 uppercase text-xs leading-tight line-clamp-1">{p.name}</h3></div>
                  <span className={`px-2.5 py-1 rounded-full text-[8px] font-black ${p.stock > 5 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>{p.stock} UDS.</span>
               </div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1 leading-none">MARCA: {p.brand || 'GENÉRICA'}</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase mt-1">MARCA: {p.brand || 'GENÉRICA'}</p>
             </div>
             <div className="grid grid-cols-2 gap-2 border-t pt-4">
                <div><p className="text-[7px] font-black text-slate-300 uppercase">ALQUILER</p><p className="text-sm font-black text-slate-700">${p.rentalPrice.toFixed(2)}</p></div>
                <div className="text-right"><p className="text-[7px] font-black text-slate-300 uppercase">REPOSICIÓN</p><p className="text-sm font-black text-red-500">${p.replacementPrice.toFixed(2)}</p></div>
             </div>
-            {/* Regla 86: Botones siempre visibles */}
             <div className="grid grid-cols-3 gap-2 pt-2 action-button-container">
-               <button onClick={() => { setEditingProduct(p); setFormData({...p, stock: p.stock.toString(), rentalPrice: p.rentalPrice.toString(), replacementPrice: p.replacementPrice.toString()} as any); setIsFormOpen(true); }} className="p-3 bg-slate-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="EDITAR"><Edit3 size={14}/></button>
-               <button onClick={() => setShowHistory(p)} className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="HISTORIAL"><History size={14}/></button>
+               <button onClick={() => { setEditingProduct(p); setFormData({...p, stock: p.stock.toString(), rentalPrice: p.rentalPrice.toString(), replacementPrice: p.replacementPrice.toString()} as any); setIsFormOpen(true); }} className="p-3 bg-slate-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"><Edit3 size={14}/></button>
+               <button onClick={() => setShowHistory(p)} className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm"><History size={14}/></button>
                <button onClick={() => {
-                 setModal({ isOpen: true, type: 'danger', title: 'BORRAR ÍTEM', message: '¿CONFIRMA ELIMINAR EL ARTÍCULO DEL CATÁLOGO?', onConfirm: () => dbService.delete('products', p.id) });
-               }} className="p-3 bg-slate-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="ELIMINAR"><Trash2 size={14}/></button>
+                 setModal({ isOpen: true, type: 'danger', title: 'ELIMINAR ÍTEM', message: '¿CONFIRMA ELIMINAR EL ARTÍCULO DEL CATÁLOGO?', onConfirm: () => dbService.delete('products', p.id) });
+               }} className="p-3 bg-slate-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm"><Trash2 size={14}/></button>
             </div>
           </div>
         ))}
       </div>
 
-      {selectedIds.length > 0 && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-10 py-5 rounded-full shadow-2xl flex items-center gap-8 animate-scale-in z-[200]">
-           <p className="text-[10px] font-black uppercase tracking-widest">{selectedIds.length} SELECCIONADOS</p>
-           <button onClick={handleBulkDelete} className="bg-red-600 px-6 py-2 rounded-xl font-black uppercase text-[10px] flex items-center gap-2 hover:bg-red-700 transition-all shadow-lg active:scale-95"><Trash2 size={16}/> ELIMINAR LOTE</button>
-           <button onClick={() => setSelectedIds([])} className="text-slate-400 hover:text-white"><X size={20}/></button>
-        </div>
-      )}
-
       {isFormOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in overflow-y-auto no-scrollbar">
           <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl p-10 space-y-6 animate-scale-in my-auto border-t-[16px] border-blue-600">
             <div className="flex justify-between items-center border-b pb-4">
-              <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest leading-none">{editingProduct ? 'ACTUALIZAR ÍTEM' : 'NUEVO REGISTRO CATÁLOGO'}</h3>
-              <button onClick={closeForm} className="text-slate-400 hover:text-slate-600 p-2 transition-all"><X size={24} /></button>
+              <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest leading-none">{editingProduct ? 'ACTUALIZAR ÍTEM' : 'NUEVO REGISTRO'}</h3>
+              <button onClick={closeForm} className="text-slate-400 hover:text-slate-600 p-2"><X size={24} /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
-                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">NOMBRE ARTÍCULO</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase text-xs outline-none focus:border-blue-500 shadow-inner" placeholder="NOMBRE..." /></div>
-                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">MARCA / MODELO</label><input type="text" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase text-xs outline-none shadow-inner" placeholder="MARCA..." /></div>
-                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">STOCK INICIAL</label><input type="text" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value.replace(/\D/g,'')})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs shadow-inner" placeholder="0" /></div>
+                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">NOMBRE ARTÍCULO</label><input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase text-xs outline-none focus:border-blue-500" placeholder="NOMBRE..." /></div>
+                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">MARCA / MODELO</label><input type="text" value={formData.brand} onChange={e => setFormData({...formData, brand: e.target.value.toUpperCase()})} className="w-full p-4 bg-slate-50 border rounded-2xl font-bold uppercase text-xs outline-none" placeholder="MARCA..." /></div>
+                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">STOCK INICIAL</label><input type="text" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value.replace(/\D/g,'')})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs" placeholder="0" /></div>
               </div>
               <div className="space-y-4">
-                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">PRECIO ALQUILER ($)</label><input type="text" value={formData.rentalPrice} onChange={e => setFormData({...formData, rentalPrice: e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs text-blue-600 shadow-inner" placeholder="0.00" /></div>
-                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">VALOR REPOSICIÓN ($)</label><input type="text" value={formData.replacementPrice} onChange={e => setFormData({...formData, replacementPrice: e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs text-red-600 shadow-inner" placeholder="0.00" /></div>
+                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">PRECIO ALQUILER ($)</label><input type="text" value={formData.rentalPrice} onChange={e => setFormData({...formData, rentalPrice: e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs text-blue-600" placeholder="0.00" /></div>
+                <div><label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">VALOR REPOSICIÓN ($)</label><input type="text" value={formData.replacementPrice} onChange={e => setFormData({...formData, replacementPrice: e.target.value})} className="w-full p-4 bg-slate-50 border rounded-2xl font-black text-xs text-red-600" placeholder="0.00" /></div>
                 
                 <div className="space-y-2">
-                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">IMAGEN (CÁMARA / GALERÍA)</label>
+                  <label className="text-[9px] font-black text-slate-400 uppercase ml-1 block mb-1">IMAGEN (GALERÍA / CÁMARA)</label>
                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => fileInputRef.current?.click()} 
-                      className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-400 hover:text-blue-500 group"
-                      title="REGLA 82: SOLO CÁMARA O GALERÍA"
-                    >
-                      {formData.imageUrl ? <img src={formData.imageUrl} className="h-12 w-12 object-cover rounded-lg mb-1 shadow-sm" /> : <Camera size={24} className="mb-1" />}
-                      <span className="text-[8px] font-black uppercase tracking-widest">SUBIR CAPTURA</span>
+                    <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50 hover:bg-blue-50 transition-all text-slate-400 hover:text-blue-500">
+                      {formData.imageUrl ? <img src={formData.imageUrl} className="h-12 w-12 object-cover rounded-lg mb-1" /> : <Camera size={20} className="mb-1" />}
+                      <span className="text-[8px] font-black uppercase">CARGAR IMAGEN</span>
                     </button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" capture="environment" onChange={handleImageUpload} />
-                    {formData.imageUrl && <button onClick={() => setFormData(p => ({...p, imageUrl: ''}))} className="p-4 bg-red-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all shadow-sm"><Trash2 size={20}/></button>}
+                    {formData.imageUrl && <button onClick={() => setFormData(p => ({...p, imageUrl: ''}))} className="p-4 bg-red-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all"><Trash2 size={20}/></button>}
                   </div>
                 </div>
               </div>
             </div>
-            <button onClick={handleSave} className="w-full py-5 shimmer-bg text-white rounded-[1.5rem] font-black uppercase text-[11px] shadow-2xl flex items-center justify-center gap-3 active:scale-95 transition-all">
-              <CheckCircle2 size={18} /> CONFIRMAR Y REGISTRAR PRODUCTO
+            <button onClick={handleSave} className="w-full py-5 shimmer-bg text-white rounded-[1.5rem] font-black uppercase text-xs shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all">
+              <CheckCircle2 size={18} /> CONFIRMAR Y REGISTRAR EN CATÁLOGO
             </button>
           </div>
         </div>

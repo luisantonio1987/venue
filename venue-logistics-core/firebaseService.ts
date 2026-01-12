@@ -60,7 +60,6 @@ export const dbService = {
   },
   getAll: (col: string) => cachedData[col] || [],
   add: async (col: string, data: any) => {
-    // Regla 84: Prevenir duplicación por ID si existe
     if (data.id && cachedData[col].some((x:any) => x.id === data.id)) return;
     const s = sanitize({ ...data, updatedAt: Date.now() });
     if (data.id) return setDoc(doc(db, col, data.id), s);
@@ -83,6 +82,7 @@ export const dbService = {
       const docSnap = await transaction.get(counterRef);
       const nextCount = (docSnap.exists() ? docSnap.data().count : 0) + 1;
       transaction.set(counterRef, { count: nextCount });
+      // Regla 11: 10 dígitos, iniciales al inicio
       finalId = prefix + nextCount.toString().padStart(10 - prefix.length, '0');
     });
     return finalId;
@@ -99,7 +99,7 @@ export const dbService = {
     window.location.reload();
   },
   exportData: () => {
-    const backup = { ...cachedData, timestamp: Date.now(), venue_v: "4.0" };
+    const backup = { ...cachedData, timestamp: Date.now(), venue_v: "6.0" };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -5,14 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#1e40af">
     
-    <!-- Enforzamiento Modo Standalone (Elimina barra de URL - Regla 94) -->
+    <!-- Configuración Standalone Estricta (Regla 94/96) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="VenueLog">
-    <link rel="apple-touch-icon" href="https://picsum.photos/192/192?random=icon">
+    <link rel="apple-touch-icon" href="https://picsum.photos/192/192?random=logo">
+    <link rel="icon" type="image/png" href="https://picsum.photos/192/192?random=logo">
     
-    <title>Venue Logistics - Core v5.0</title>
+    <title>Venue Logistics - Enterprise Core</title>
     <link rel="manifest" href="./manifest.json">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -32,7 +33,7 @@
               shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
               pulseLatent: {
                 '0%, 100%': { transform: 'scale(1)', filter: 'brightness(1)', boxShadow: '0 0 0px rgba(59, 130, 246, 0)' },
-                '50%': { transform: 'scale(1.02)', filter: 'brightness(1.1)', boxShadow: '0 0 25px rgba(59, 130, 246, 0.5)' }
+                '50%': { transform: 'scale(1.05)', filter: 'brightness(1.2)', boxShadow: '0 0 30px rgba(59, 130, 246, 0.6)' }
               }
             }
           }
@@ -41,26 +42,22 @@
     </script>
     <style>
         body { font-family: 'Inter', sans-serif; overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; background-color: #f8fafc; margin: 0; padding: 0; }
-        .shimmer-text { background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shimmer 3s infinite linear; }
-        .shimmer-bg { background: linear-gradient(90deg, #1e40af 0%, #60a5fa 50%, #1e40af 100%); background-size: 200% auto; animation: shimmer 3s infinite linear; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
+        /* Regla 40: Forzar mayúsculas visuales en inputs (excepto email) */
         input:not([type="email"]):not(.lowercase-input), 
         textarea:not(.lowercase-input), 
         select { text-transform: uppercase !important; }
         
-        input[type="number"]::-webkit-inner-spin-button, 
-        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        /* Regla 86/89: Botones siempre visibles en móvil */
+        .action-button-container { display: flex !important; opacity: 1 !important; visibility: visible !important; }
 
         @media print {
           .print-hidden { display: none !important; }
           .print-only { display: block !important; }
-          body { background: white !important; }
           @page { size: A4; margin: 10mm; }
         }
-        .print-only { display: none; }
-        .action-container { display: flex; flex-wrap: wrap; gap: 0.5rem; opacity: 1 !important; visibility: visible !important; }
     </style>
 <script type="importmap">
 {
@@ -76,18 +73,13 @@
 </head>
 <body class="text-slate-900 overflow-x-hidden">
     <div id="root"></div>
-    <!-- Script de redirección para manejar 404 en GitHub Pages -->
     <script type="text/javascript">
-      (function(l) {
-        if (l.search[1] === '/' ) {
-          var decoded = l.search.slice(1).split('&').map(function(s) { 
-            return s.replace(/~and~/g, '&')
-          }).join('?');
-          window.history.replaceState(null, null,
-              l.pathname.slice(0, -1) + decoded + l.hash
-          );
-        }
-      }(window.location))
+      // Registro de Service Worker para PWA (sin redirecciones que rompan el proxy de AI Studio)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch(() => {});
+        });
+      }
     </script>
     <script type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>

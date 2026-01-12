@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { dbService, DbStatus } from './firebaseService';
-import { UserAccount, UserRole, CompanyData } from './types';
+import { UserAccount, CompanyData } from './types';
 import Layout from './components/Layout';
 import Modal, { ModalType } from './components/Modal';
 import LoginScreen from './modules/LoginScreen';
 import Dashboard from './modules/Dashboard';
-import OrderForm from './modules/OrderForm';
+import SalesModule from './modules/SalesModule';
 import ConfirmedOrders from './modules/ConfirmedOrders';
 import DispatchModule from './modules/DispatchModule';
 import ReturnsModule from './modules/ReturnsModule';
@@ -18,9 +18,8 @@ import PortfolioModule from './modules/PortfolioModule';
 import PettyCashModule from './modules/PettyCashModule';
 import ReportsModule from './modules/ReportsModule';
 import CompanySettings from './modules/CompanySettings';
-import { WifiOff, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2 } from 'lucide-react';
 
-// Regla 93: Logo rediseñado moderno con círculos, cuadrados y shimmer
 export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg", light?: boolean }) => {
   const sizes = { sm: "h-10", md: "h-16", lg: "h-24" };
   return (
@@ -38,7 +37,7 @@ export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg"
           <circle cx="50" cy="50" r="18" fill="url(#logoGrad)" className="animate-pulse" />
           <rect x="42" y="42" width="16" height="16" rx="4" fill="white" className="animate-spin-slow" />
         </svg>
-        <div className="absolute inset-0 shimmer-bg opacity-20 rounded-full blur-xl group-hover:opacity-40 transition-opacity"></div>
+        <div className="absolute inset-0 shimmer-bg opacity-20 rounded-full blur-xl"></div>
       </div>
       <div className="flex flex-col justify-center leading-none">
         <span className={`font-black tracking-tighter uppercase ${size === 'lg' ? 'text-4xl' : size === 'md' ? 'text-2xl' : 'text-lg'} ${light ? 'text-white' : 'shimmer-text'}`}>VENUE</span>
@@ -49,57 +48,31 @@ export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg"
 };
 
 const App: React.FC = () => {
-  const [activeModule, setActiveModule] = useState('dashboard');
+  const [activeModule, setActiveModule] = useState(() => sessionStorage.getItem('last_mod') || 'dashboard');
   const [dbStatus, setDbStatus] = useState<DbStatus>('loading');
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(() => {
-    const saved = sessionStorage.getItem('venue_user');
-    return saved ? JSON.parse(saved) : null;
+    const s = sessionStorage.getItem('v_user'); return s ? JSON.parse(s) : null;
   });
   const [company, setCompany] = useState<CompanyData | null>(null);
-  const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
   const [sessionMsg, setSessionMsg] = useState<{ visible: boolean; type: 'in' | 'out' }>({ visible: false, type: 'in' });
   const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string; onConfirm?: () => void }>({ isOpen: false, type: 'info', title: '', message: '' });
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    const unsubscribe = dbService.subscribe((data: any, status: DbStatus) => {
-      setDbStatus(status);
-      setCompany(data.company?.[0] || null);
-      if (status === 'ready' && data.users.length === 0) {
-        dbService.add('users', {
-          name: 'ADMINISTRADOR MAESTRO',
-          username: 'ROOT',
-          password: '123',
-          role: UserRole.ADMIN_TOTAL,
-          status: 'ACTIVO',
-          mustChangePassword: true,
-          permissions: {},
-          createdAt: Date.now()
-        });
-      }
+    const hPrompt = (e: any) => { e.preventDefault(); setDeferredPrompt(e); };
+    window.addEventListener('beforeinstallprompt', hPrompt);
+    const sub = dbService.subscribe((data: any, status: DbStatus) => {
+      setDbStatus(status); setCompany(data.company?.[0] || null);
     });
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    });
-
-    return () => unsubscribe();
+    return () => { window.removeEventListener('beforeinstallprompt', hPrompt); sub(); };
   }, []);
 
-  const handleInstall = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') setDeferredPrompt(null);
-    }
-  };
+  const navigateTo = (m: string) => { setActiveModule(m); sessionStorage.setItem('last_mod', m); };
 
-  const handleLogin = (user: UserAccount) => {
+  const handleLogin = (u: UserAccount) => {
     setSessionMsg({ visible: true, type: 'in' });
     setTimeout(() => {
-      setCurrentUser(user);
-      sessionStorage.setItem('venue_user', JSON.stringify(user));
+      setCurrentUser(u); sessionStorage.setItem('v_user', JSON.stringify(u));
       setSessionMsg({ visible: false, type: 'in' });
     }, 1500);
   };
@@ -111,99 +84,79 @@ const App: React.FC = () => {
       onConfirm: () => {
         setSessionMsg({ visible: true, type: 'out' });
         setTimeout(() => {
-          sessionStorage.removeItem('venue_user');
-          setCurrentUser(null);
-          setSessionMsg({ visible: false, type: 'out' });
-          setActiveModule('dashboard');
+          sessionStorage.clear(); setCurrentUser(null);
+          setSessionMsg({ visible: false, type: 'out' }); navigateTo('dashboard');
         }, 1500);
       }
     });
   };
 
-  const renderModule = () => {
-    if (dbStatus === 'error') return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
-        <WifiOff size={80} className="text-red-500 mb-8 animate-pulse" />
-        <h2 className="text-white font-black uppercase text-2xl mb-4 tracking-tighter">SIN CONEXIÓN AL SERVIDOR</h2>
-        <button onClick={() => window.location.reload()} className="px-12 py-5 shimmer-bg text-white rounded-2xl font-black uppercase text-[11px] shadow-2xl">REINTENTAR</button>
-      </div>
-    );
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setDeferredPrompt(null);
+  };
 
+  const renderModule = () => {
     if (!currentUser) return <LoginScreen onLogin={handleLogin} />;
-    
     if (currentUser.mustChangePassword) {
       return (
         <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[4rem] p-12 w-full max-w-md shadow-2xl space-y-12 border-t-[16px] border-blue-600 animate-scale-in">
-            <div className="text-center space-y-4">
-               <ShieldCheck className="mx-auto text-blue-600" size={60}/>
-               <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter leading-none">ACTUALIZAR PIN</h2>
-               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">POR SEGURIDAD, ACTUALICE SU CLAVE PERSONAL AL PRIMER INGRESO.</p>
-            </div>
-            <div className="space-y-6">
-              <input id="newPin" type="password" placeholder="NUEVO PIN" className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-3xl outline-none focus:border-blue-500 uppercase shadow-inner tracking-widest" />
-              <button onClick={async () => {
-                const pin = (document.getElementById('newPin') as HTMLInputElement).value;
-                if(pin.length < 3) {
-                  setModal({ isOpen: true, type: 'warning', title: 'DATOS INVÁLIDOS', message: 'EL PIN DEBE TENER AL MENOS 3 CARACTERES.' });
-                  return;
-                }
-                await dbService.update('users', currentUser.id, { password: pin.toUpperCase(), mustChangePassword: false });
-                handleLogin({...currentUser, mustChangePassword: false});
-              }} className="w-full py-6 shimmer-bg text-white rounded-3xl font-black uppercase text-[11px] shadow-2xl active:scale-95 transition-all">ACTIVAR CUENTA</button>
-            </div>
+          <div className="bg-white rounded-[4rem] p-12 w-full max-w-md shadow-2xl space-y-8 animate-scale-in border-t-[16px] border-blue-600">
+            <ShieldCheck className="mx-auto text-blue-600" size={60}/>
+            <h2 className="text-2xl font-black text-center text-slate-800 uppercase tracking-tighter">ACTUALIZAR CLAVE</h2>
+            <input id="newPin" type="password" placeholder="NUEVO PIN" className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-3xl outline-none focus:border-blue-500 uppercase tracking-widest" />
+            <button onClick={async () => {
+              const p = (document.getElementById('newPin') as HTMLInputElement).value;
+              if(p.length < 3) return;
+              await dbService.update('users', currentUser.id, { password: p.toUpperCase(), mustChangePassword: false });
+              handleLogin({...currentUser, mustChangePassword: false});
+            }} className="w-full py-6 shimmer-bg text-white rounded-3xl font-black uppercase text-[11px] shadow-2xl">ACTIVAR CUENTA</button>
           </div>
         </div>
       );
     }
 
-    const safeUser = currentUser as UserAccount;
-
     switch (activeModule) {
-      case 'dashboard': return <Dashboard setActiveModule={setActiveModule} handleLogout={handleLogout} handleInstall={handleInstall} hasInstallPrompt={!!deferredPrompt} />;
-      case 'sales': return <OrderForm onSaved={() => setActiveModule('orders')} onCancel={() => setActiveModule('dashboard')} company={company} user={safeUser} />;
-      case 'confirmed': return <ConfirmedOrders onEdit={(id) => { setEditingOrderId(id); setActiveModule('edit-order'); }} company={company} user={safeUser} />;
-      case 'edit-order': return <OrderForm editOrderId={editingOrderId || undefined} onSaved={() => setActiveModule('orders')} onCancel={() => setActiveModule('orders')} company={company} user={safeUser} />;
+      case 'dashboard': return <Dashboard setActiveModule={navigateTo} handleLogout={handleLogout} handleInstall={handleInstall} hasInstallPrompt={!!deferredPrompt} />;
+      case 'sales': return <SalesModule onSaved={() => navigateTo('confirmed')} company={company} user={currentUser} />;
+      case 'confirmed': return <ConfirmedOrders onEdit={() => navigateTo('sales')} company={company} user={currentUser} />;
       case 'dispatch': return <DispatchModule />;
       case 'returns': return <ReturnsModule />;
       case 'pendings': return <PendingsModule />;
       case 'inventory': return <InventoryModule />;
-      case 'clients': return <ClientsModule user={safeUser} />;
+      case 'clients': return <ClientsModule user={currentUser} />;
       case 'cash': return <CashModule company={company} />;
       case 'petty-cash': return <PettyCashModule />;
       case 'portfolio': return <PortfolioModule company={company} />;
       case 'reports': return <ReportsModule />;
-      case 'system': return <SystemModule user={safeUser} />;
+      case 'system': return <SystemModule user={currentUser} />;
       case 'company-config': return <CompanySettings company={company} />;
-      default: return <Dashboard setActiveModule={setActiveModule} handleLogout={handleLogout} handleInstall={handleInstall} hasInstallPrompt={!!deferredPrompt} />;
+      default: return <Dashboard setActiveModule={navigateTo} handleLogout={handleLogout} handleInstall={handleInstall} hasInstallPrompt={!!deferredPrompt} />;
     }
   };
 
-  if (sessionMsg.visible) {
-    return (
-      <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center animate-fade-in">
-        <div className="p-12 bg-white rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl animate-scale-in border-t-[12px] border-blue-600">
-           <CheckCircle2 size={72} className="text-emerald-500 animate-bounce" />
-           <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">
-             {sessionMsg.type === 'in' ? 'INICIANDO SESIÓN' : 'CERRANDO SESIÓN'}
-           </h2>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">PROCESANDO...</p>
-        </div>
-      </div>
-    );
-  }
+  if (dbStatus === 'loading') return (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-10">
+      <Logo size="lg" />
+      <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden relative"><div className="absolute inset-0 bg-blue-600 w-1/3 animate-[shimmer_2s_infinite_linear]"></div></div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen selection:bg-blue-100 font-sans antialiased bg-slate-50 no-scrollbar overflow-hidden">
+    <div className="min-h-screen font-sans antialiased bg-slate-50 no-scrollbar overflow-hidden">
       <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={() => setModal({ ...modal, isOpen: false })} />
-      {dbStatus === 'loading' ? (
-        <div className="fixed inset-0 bg-white flex flex-col items-center justify-center gap-10">
-          <Logo size="lg" />
-          <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden relative"><div className="absolute inset-0 bg-blue-600 w-1/3 animate-[shimmer_2s_infinite_linear]"></div></div>
+      {sessionMsg.visible ? (
+        <div className="fixed inset-0 bg-slate-900 z-[9999] flex flex-col items-center justify-center animate-fade-in">
+          <div className="p-12 bg-white rounded-[3rem] flex flex-col items-center gap-6 shadow-2xl border-t-[12px] border-blue-600">
+             <CheckCircle2 size={72} className="text-emerald-500 animate-bounce" />
+             <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter">{sessionMsg.type === 'in' ? 'BIENVENIDO' : 'ADIÓS'}</h2>
+          </div>
         </div>
       ) : (
         !currentUser || currentUser.mustChangePassword ? renderModule() : (
-          <Layout activeModule={activeModule} setActiveModule={setActiveModule} onLogout={handleLogout} onInstall={handleInstall} hasInstall={!!deferredPrompt} user={currentUser} company={company}>
+          <Layout activeModule={activeModule} setActiveModule={navigateTo} onLogout={handleLogout} user={currentUser} company={company}>
             {renderModule()}
           </Layout>
         )
