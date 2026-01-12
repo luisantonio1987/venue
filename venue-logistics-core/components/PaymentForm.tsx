@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { dbService } from '../firebaseService';
 import { Order, PaymentRecord, CashTransaction } from '../types';
 import { Check, X, Wallet, CreditCard, Landmark, FileText, Printer, Calculator, Banknote } from 'lucide-react';
+import Modal, { ModalType } from './Modal';
 
 interface PaymentFormProps {
   order: Order;
@@ -18,6 +19,10 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ order, onSaved, onCancel }) =
   const [bankTarget, setBankTarget] = useState<'BANCO_AUSTRO' | 'BANCO_GUAYAQUIL'>('BANCO_AUSTRO');
   const [checkDetails, setCheckDetails] = useState({ clientName: order.clientName, issuingBank: '', checkNumber: '', accountNumber: '', observations: '' });
 
+  const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string; onConfirm?: () => void }>({
+    isOpen: false, type: 'info', title: '', message: ''
+  });
+
   const pending = order.total - (order.paidAmount || 0);
   const received = payType === 'CREDITO' ? 0 : (parseFloat(receivedStr.replace(',', '.')) || 0);
   const applied = payType === 'TOTAL' ? pending : Math.min(received, pending);
@@ -25,12 +30,12 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ order, onSaved, onCancel }) =
   const finalSaldo = Math.max(0, pending - applied);
 
   const handleSave = async () => {
-    if (payType !== 'CREDITO' && received <= 0 && receivedStr !== '') {
-      alert("VALOR INVÁLIDO."); return;
+    if (payType !== 'CREDITO' && (received <= 0 && receivedStr !== '')) {
+      setModal({ isOpen: true, type: 'warning', title: 'VALOR INVÁLIDO', message: 'EL MONTO RECIBIDO DEBE SER MAYOR A CERO.' });
+      return;
     }
     
     const paymentId = await dbService.generateSequentialId('RC');
-    // Fixed: Corrected property mappings for PaymentRecord interface (vuelto -> change, bankTarget -> bank, etc)
     const record: PaymentRecord = {
       id: paymentId, 
       date: Date.now(), 
@@ -58,7 +63,6 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ order, onSaved, onCancel }) =
     });
 
     if (applied > 0 && payType !== 'CREDITO') {
-      // Fixed: Corrected property mapping for CashTransaction interface (vuelto -> change)
       const cashEntry: CashTransaction = {
         id: paymentId, 
         orderId: order.id, 
@@ -73,12 +77,19 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ order, onSaved, onCancel }) =
       await dbService.add('cash', cashEntry);
     }
 
-    alert(`COBRO EXITOSO. SALDO PENDIENTE: $${finalSaldo.toFixed(2)}`);
-    onSaved();
+    setModal({
+      isOpen: true,
+      type: 'success',
+      title: 'TRANSACCIÓN COMPLETADA',
+      message: `EL PAGO HA SIDO REGISTRADO EXITOSAMENTE. SALDO FINAL: $${finalSaldo.toFixed(2)}`,
+      onConfirm: onSaved
+    });
   };
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={() => setModal({...modal, isOpen: false})} />
+      
       <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl p-10 space-y-8 animate-scale-in border-t-[12px] border-emerald-500">
         <div className="flex justify-between items-center border-b pb-6">
           <div>

@@ -3,18 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { CashTransaction, CompanyData } from '../types';
 import { Wallet, Search, Printer, Trash2, ArrowUpRight, ArrowDownLeft, Download, Coins, FileText } from 'lucide-react';
+import Modal, { ModalType } from '../components/Modal';
 
 const CashModule = ({ company }: { company: CompanyData | null }) => {
   const [transactions, setTransactions] = useState<CashTransaction[]>([]);
   const [filterType, setFilterType] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   const [search, setSearch] = useState('');
+  const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string; onConfirm?: () => void }>({
+    isOpen: false, type: 'info', title: '', message: ''
+  });
 
   useEffect(() => {
     return dbService.subscribe((data: any) => setTransactions(data.cash || []));
   }, []);
 
   const totalIncome = transactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + (t.amount || 0), 0);
-  // Fixed: Corrected property access from 'vuelto' to 'change' to match the interface
   const totalVueltos = transactions.filter(t => t.type === 'INCOME').reduce((sum, t) => sum + (t.change || 0), 0);
   const totalExpense = transactions.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + (t.amount || 0), 0);
   const balance = totalIncome - totalExpense;
@@ -24,8 +27,23 @@ const CashModule = ({ company }: { company: CompanyData | null }) => {
     return (t.id.toUpperCase().includes(s) || (t.orderId || '').toUpperCase().includes(s) || (t.reason || '').toUpperCase().includes(s)) && (filterType === 'ALL' || t.type === filterType);
   });
 
+  const handleDeleteTransaction = (t: CashTransaction) => {
+    setModal({
+      isOpen: true,
+      type: 'danger',
+      title: 'ANULAR MOVIMIENTO',
+      message: `¿CONFIRMA QUE DESEA ANULAR LA TRANSACCIÓN ${t.id}? ESTO AFECTARÁ EL SALDO DISPONIBLE EN CAJA.`,
+      onConfirm: async () => {
+        await dbService.delete('cash', t.id);
+        setModal({ isOpen: true, type: 'success', title: 'ANULADO', message: 'EL MOVIMIENTO HA SIDO ELIMINADO.' });
+      }
+    });
+  };
+
   return (
     <div className="space-y-8 animate-fade-in pb-20 no-scrollbar">
+      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onConfirm={modal.onConfirm} onClose={() => setModal({ ...modal, isOpen: false })} />
+      
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-[2.5rem] border shadow-sm gap-4">
         <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter leading-none">CAJA Y ARQUEO DIARIO</h2>
         <div className="flex flex-wrap gap-3 w-full md:w-auto">
@@ -94,12 +112,11 @@ const CashModule = ({ company }: { company: CompanyData | null }) => {
                   </td>
                   <td className="px-8 py-6"><span className="px-3 py-1 bg-slate-100 rounded-lg text-[8px] font-black border border-slate-200">{t.method}</span></td>
                   <td className={`px-8 py-6 text-right font-black ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-red-600'}`}>{t.type === 'INCOME' ? '+' : '-'}${t.amount.toFixed(2)}</td>
-                  {/* Fixed: Corrected property access from 'vuelto' to 'change' to match the interface */}
                   <td className="px-8 py-6 text-right font-black text-blue-600">${(t.change || 0).toFixed(2)}</td>
                   <td className="px-8 py-6">
                     <div className="flex justify-center gap-2">
                       <button className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all shadow-sm" title="REIMPRIMIR"><Printer size={16}/></button>
-                      <button onClick={async () => { if(confirm("¿ANULAR TRANSACCIÓN?")) await dbService.delete('cash', t.id); }} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>
+                      <button onClick={() => handleDeleteTransaction(t)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16}/></button>
                     </div>
                   </td>
                 </tr>

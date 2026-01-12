@@ -15,11 +15,12 @@ import InventoryModule from './modules/InventoryModule';
 import ClientsModule from './modules/ClientsModule';
 import CashModule from './modules/CashModule';
 import SystemModule from './modules/SystemModule';
-import CompanySettings from './modules/CompanySettings';
 // Added missing module imports
 import PortfolioModule from './modules/PortfolioModule';
 import PettyCashModule from './modules/PettyCashModule';
 import ReportsModule from './modules/ReportsModule';
+// Added missing CompanySettings import
+import CompanySettings from './modules/CompanySettings';
 import { WifiOff, ShieldCheck, CheckCircle2, LogOut, User as UserIcon } from 'lucide-react';
 
 export const Logo = ({ size = "md", light = false }: { size?: "sm" | "md" | "lg", light?: boolean }) => {
@@ -130,7 +131,10 @@ const App: React.FC = () => {
               <input id="newPin" type="password" placeholder="NUEVO PIN" className="w-full p-6 bg-slate-50 border-4 rounded-3xl font-black text-center text-3xl outline-none focus:border-blue-500 uppercase shadow-inner tracking-widest" />
               <button onClick={async () => {
                 const pin = (document.getElementById('newPin') as HTMLInputElement).value;
-                if(pin.length < 3) return alert("MIN. 3 CARACTERES.");
+                if(pin.length < 3) {
+                  setModal({ isOpen: true, type: 'warning', title: 'LONGITUD INVÁLIDA', message: 'EL PIN DEBE TENER AL MENOS 3 CARACTERES.' });
+                  return;
+                }
                 await dbService.update('users', currentUser.id, { password: pin.toUpperCase(), mustChangePassword: false });
                 handleLogin({...currentUser, mustChangePassword: false});
               }} className="w-full py-6 shimmer-bg text-white rounded-3xl font-black uppercase text-[11px] shadow-2xl active:scale-95 transition-all">ACTIVAR CUENTA</button>

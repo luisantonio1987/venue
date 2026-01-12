@@ -86,7 +86,7 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
 
   const handleFactoryReset = async () => {
     if (resetPassword.toUpperCase() !== user.password?.toUpperCase()) {
-      alert("CONTRASEÑA INCORRECTA");
+      setModal({ isOpen: true, type: 'danger', title: 'AUTENTICACIÓN FALLIDA', message: 'LA CONTRASEÑA DE ADMINISTRADOR ES INCORRECTA.' });
       return;
     }
     await dbService.factoryReset();
@@ -162,7 +162,7 @@ const SystemModule = ({ user }: { user: UserAccount }) => {
 
       {resetConfirmOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/90 backdrop-blur-md animate-fade-in">
-          <div className="bg-white rounded-[4rem] shadow-2xl w-full max-w-md p-12 space-y-10 animate-scale-in border-t-[16px] border-red-600">
+          <div className="bg-white rounded-[4rem] shadow-2xl w-full max-md p-12 space-y-10 animate-scale-in border-t-[16px] border-red-600">
             <div className="text-center space-y-4">
               <div className="mx-auto w-24 h-24 bg-red-50 text-red-600 rounded-[2.5rem] flex items-center justify-center shadow-inner"><AlertTriangle size={48}/></div>
               <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tighter leading-none">RESETEO INTEGRAL</h3>

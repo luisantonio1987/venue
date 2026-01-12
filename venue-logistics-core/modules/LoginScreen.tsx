@@ -4,12 +4,16 @@ import { dbService } from '../firebaseService';
 import { UserAccount } from '../types';
 import { Logo } from '../App';
 import { Eye, EyeOff, KeyRound, ArrowRight, User } from 'lucide-react';
+import Modal, { ModalType } from '../components/Modal';
 
 const LoginScreen = ({ onLogin }: { onLogin: (u: UserAccount) => void }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string }>({
+    isOpen: false, type: 'info', title: '', message: ''
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +29,13 @@ const LoginScreen = ({ onLogin }: { onLogin: (u: UserAccount) => void }) => {
       
       if (u) {
         if(u.status === 'INACTIVO') {
-           alert("CUENTA DESACTIVADA.");
+           setModal({ isOpen: true, type: 'danger', title: 'ACCESO DENEGADO', message: 'SU CUENTA SE ENCUENTRA DESACTIVADA. CONTACTE AL ADMINISTRADOR.' });
            setLoading(false);
            return;
         }
         onLogin(u);
       } else {
-        alert("CREDENCIALES INCORRECTAS");
+        setModal({ isOpen: true, type: 'warning', title: 'DATOS INCORRECTOS', message: 'EL USUARIO O LA CONTRASEÑA NO COINCIDEN CON NUESTROS REGISTROS.' });
         setLoading(false);
       }
     }, 800);
@@ -39,6 +43,8 @@ const LoginScreen = ({ onLogin }: { onLogin: (u: UserAccount) => void }) => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
+      <Modal isOpen={modal.isOpen} type={modal.type} title={modal.title} message={modal.message} onClose={() => setModal({...modal, isOpen: false})} />
+      
       <div className="bg-white rounded-[3.5rem] p-10 w-full max-w-lg shadow-2xl space-y-10 animate-scale-in relative z-10 border-t-[12px] border-blue-600">
         <div className="flex flex-col items-center">
           <Logo size="lg" />
@@ -70,7 +76,7 @@ const LoginScreen = ({ onLogin }: { onLogin: (u: UserAccount) => void }) => {
             <ArrowRight size={18} />
           </button>
           
-          <button type="button" onClick={() => alert("CONTACTE AL SUPER ADMIN")} className="w-full text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-blue-600">¿Olvidó su contraseña?</button>
+          <button type="button" onClick={() => setModal({ isOpen: true, type: 'info', title: 'RECUPERAR ACCESO', message: 'PARA RESTABLECER SU CLAVE, POR FAVOR CONTACTE AL ADMINISTRADOR MAESTRO DEL SISTEMA.' })} className="w-full text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-blue-600">¿Olvidó su contraseña?</button>
         </form>
       </div>
     </div>

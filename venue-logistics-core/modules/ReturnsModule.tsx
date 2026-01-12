@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { dbService } from '../firebaseService';
 import { Order } from '../types';
 import Modal, { ModalType } from '../components/Modal';
-import { RotateCcw, AlertTriangle, CheckCircle2, Search, ArrowRight, PackageOpen } from 'lucide-react';
+import { RotateCcw, AlertTriangle, CheckCircle2, Search, ArrowRight, PackageOpen, X, Check } from 'lucide-react';
 
 const ReturnsModule = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -11,6 +11,10 @@ const ReturnsModule = () => {
   const [modal, setModal] = useState<{ isOpen: boolean; type: ModalType; title: string; message: string; onConfirm?: () => void; autoClose?: number }>({
     isOpen: false, type: 'info', title: '', message: ''
   });
+
+  // Estado para capturar novedad mediante modal
+  const [novedadPrompt, setNovedadPrompt] = useState<{ isOpen: boolean; orderId: string } | null>(null);
+  const [novedadText, setNovedadText] = useState('');
 
   useEffect(() => {
     return dbService.subscribe((data: any) => {
@@ -34,22 +38,25 @@ const ReturnsModule = () => {
         }
       });
     } else {
-      const detail = prompt("DESCRIBA LAS NOVEDADES (PÉRDIDAS, ROTURAS, DAÑOS):");
-      if(detail) {
-        setModal({
-          isOpen: true,
-          type: 'warning',
-          title: 'REGISTRAR NOVEDAD',
-          message: `¿DESEA MARCAR EL PEDIDO ${o.id} CON INGRESO PARCIAL POR: "${detail.toUpperCase()}"? PASARÁ AL MÓDULO DE PENDIENTES.`,
-          onConfirm: async () => {
-            await dbService.update('orders', o.id, { 
-              status: 'INGRESO_PARCIAL',
-              nuisances: detail.toUpperCase()
-            });
-            setModal({ isOpen: true, type: 'success', title: 'REGISTRADO', message: 'NOVEDAD ASIGNADA AL PEDIDO.', autoClose: 1500 });
-          }
-        });
-      }
+      setNovedadPrompt({ isOpen: true, orderId: o.id });
+    }
+  };
+
+  const submitNovedad = async () => {
+    if (!novedadText.trim()) {
+      setModal({ isOpen: true, type: 'warning', title: 'CAMPO VACÍO', message: 'DEBE DESCRIBIR LA NOVEDAD PARA PROCEDER.' });
+      return;
+    }
+    
+    const orderId = novedadPrompt?.orderId;
+    if (orderId) {
+      await dbService.update('orders', orderId, { 
+        status: 'INGRESO_PARCIAL',
+        nuisances: novedadText.toUpperCase()
+      });
+      setNovedadPrompt(null);
+      setNovedadText('');
+      setModal({ isOpen: true, type: 'success', title: 'REGISTRADO', message: 'NOVEDAD ASIGNADA AL PEDIDO.', autoClose: 1500 });
     }
   };
 
@@ -69,6 +76,31 @@ const ReturnsModule = () => {
         autoClose={modal.autoClose}
         onClose={() => setModal({ ...modal, isOpen: false })} 
       />
+
+      {/* Modal Personalizado para Novedades */}
+      {novedadPrompt?.isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md p-8 space-y-6 animate-scale-in border-t-[12px] border-amber-500">
+            <div className="flex justify-between items-center border-b pb-4">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">REGISTRAR NOVEDAD</h3>
+              <button onClick={() => setNovedadPrompt(null)} className="text-slate-300 hover:text-red-500 p-1 transition-all"><X size={24}/></button>
+            </div>
+            <div className="space-y-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">DESCRIBA PÉRDIDAS, ROTURAS O DAÑOS:</p>
+              <textarea 
+                autoFocus
+                value={novedadText}
+                onChange={e => setNovedadText(e.target.value)}
+                className="w-full p-4 bg-slate-50 border rounded-2xl text-[11px] font-bold min-h-[120px] outline-none focus:border-amber-500 shadow-inner uppercase"
+                placeholder="EJ: 2 COPAS ROTAS, MANTEL MANCHADO..."
+              />
+            </div>
+            <button onClick={submitNovedad} className="w-full py-4 bg-amber-500 text-white rounded-2xl font-black uppercase text-[10px] shadow-lg flex items-center justify-center gap-2 hover:bg-amber-600 transition-all">
+              <Check size={18}/> CONFIRMAR NOVEDAD
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-6 rounded-[2.5rem] border shadow-sm gap-4">
         <h2 className="text-2xl font-black uppercase text-slate-800 tracking-tighter leading-none">RETORNOS Y DEVOLUCIONES</h2>

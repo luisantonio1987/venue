@@ -24,7 +24,10 @@ const ClientsModule = ({ user }: { user: UserAccount }) => {
 
   const handleSave = async () => {
     const idLen = formData.identification.length;
-    if (idLen !== 10 && idLen !== 13) return alert("IDENTIFICACIÓN INVÁLIDA (10 O 13 DÍGITOS).");
+    if (idLen !== 10 && idLen !== 13) {
+      setModal({ isOpen: true, type: 'warning', title: 'ID INVÁLIDO', message: 'LA IDENTIFICACIÓN DEBE TENER 10 O 13 DÍGITOS.' });
+      return;
+    }
     
     setModal({
       isOpen: true,

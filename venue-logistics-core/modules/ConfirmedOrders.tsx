@@ -49,6 +49,19 @@ const ConfirmedOrders = ({ onEdit, company, user }: { onEdit: (id: string) => vo
     });
   };
 
+  const handleVoidOrder = (o: Order) => {
+    setModal({
+      isOpen: true,
+      type: 'danger',
+      title: 'ANULAR PEDIDO',
+      message: `¿ESTÁ SEGURO QUE DESEA ANULAR EL PEDIDO ${o.id}? ESTA ACCIÓN CAMBIARÁ SU ESTADO Y AFECTARÁ LA DISPONIBILIDAD.`,
+      onConfirm: async () => {
+        await dbService.update('orders', o.id, { status: 'ANULADO' });
+        setModal({ isOpen: true, type: 'success', title: 'PEDIDO ANULADO', message: 'LA TRANSACCIÓN HA SIDO INVALIDADA.' });
+      }
+    });
+  };
+
   const isDispatchAvailable = (startDate: number) => {
     const diff = startDate - Date.now();
     return diff <= (3 * 24 * 60 * 60 * 1000); // Regla 2: 3 días antes
@@ -147,7 +160,7 @@ const ConfirmedOrders = ({ onEdit, company, user }: { onEdit: (id: string) => vo
             <div className="grid grid-cols-3 gap-2">
                 <button onClick={() => onEdit(o.id)} className="p-3 bg-slate-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm" title="EDITAR"><Edit3 size={14}/></button>
                 <button onClick={() => setPrintingOrder(o)} className="p-3 bg-slate-50 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white transition-all shadow-sm" title="GUÍA DE REMISIÓN (REGLA 67)"><FileText size={14}/></button>
-                <button onClick={() => { if(confirm("¿PROCEDE CON LA ANULACIÓN?")) dbService.update('orders', o.id, { status: 'ANULADO' }); }} className="p-3 bg-slate-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="ANULAR"><Trash2 size={14}/></button>
+                <button onClick={() => handleVoidOrder(o)} className="p-3 bg-slate-50 text-red-600 rounded-xl hover:bg-red-600 hover:text-white transition-all shadow-sm" title="ANULAR"><Trash2 size={14}/></button>
             </div>
 
             {o.status === 'PROFORMA' ? (

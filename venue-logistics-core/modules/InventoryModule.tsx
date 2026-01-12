@@ -28,7 +28,10 @@ const InventoryModule = () => {
   }, []);
 
   const handleSave = async () => {
-    if(!formData.name) return alert("EL NOMBRE ES OBLIGATORIO.");
+    if(!formData.name) {
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS INCOMPLETOS', message: 'EL NOMBRE DEL PRODUCTO ES OBLIGATORIO.' });
+      return;
+    }
     
     setModal({
       isOpen: true,

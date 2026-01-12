@@ -23,10 +23,12 @@ const PettyCashModule = () => {
   const toUpper = (val: string) => (val || '').toUpperCase();
 
   const handleSave = async () => {
-    if (!formData.amount || !formData.reason) return alert("VALOR Y MOTIVO SON OBLIGATORIOS.");
+    if (!formData.amount || !formData.reason) {
+      setModal({ isOpen: true, type: 'warning', title: 'DATOS FALTANTES', message: 'VALOR Y MOTIVO SON CAMPOS OBLIGATORIOS.' });
+      return;
+    }
     
     const sequentialId = await dbService.generateSequentialId('CC');
-    // Fixed: Corrected property name mapping from 'vuelto' to 'change' to match CashTransaction interface
     const expense: CashTransaction = {
       id: sequentialId,
       amount: parseFloat(formData.amount.replace(',', '.')) || 0,
@@ -44,6 +46,19 @@ const PettyCashModule = () => {
     setIsFormOpen(false);
     setFormData({ amount: '', reason: '', beneficiary: '' });
     setModal({ isOpen: true, type: 'success', title: 'GASTO REGISTRADO', message: `VALE ${sequentialId} GUARDADO CORRECTAMENTE EN EGRESOS DE CAJA.` });
+  };
+
+  const handleDeleteExpense = (e: CashTransaction) => {
+    setModal({
+      isOpen: true,
+      type: 'danger',
+      title: 'ELIMINAR GASTO',
+      message: `¿CONFIRMA QUE DESEA ELIMINAR EL VALE ${e.id}? ESTA ACCIÓN ES PERMANENTE.`,
+      onConfirm: async () => {
+        await dbService.delete('cash', e.id);
+        setModal({ isOpen: true, type: 'success', title: 'ELIMINADO', message: 'EL REGISTRO DE GASTO HA SIDO REMOVIDO.' });
+      }
+    });
   };
 
   const filtered = expenses.filter(e => 
@@ -84,7 +99,7 @@ const PettyCashModule = () => {
             </div>
             <div className="flex justify-between items-end border-t pt-4 border-slate-50">
                <div><p className="text-[7px] font-black text-slate-300 uppercase">VALOR EGRESO</p><p className="text-xl font-black text-red-600 font-mono">-${e.amount.toFixed(2)}</p></div>
-               <button onClick={async () => { if(confirm("¿DESEA ELIMINAR ESTE GASTO?")) await dbService.delete('cash', e.id); }} className="p-3 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
+               <button onClick={() => handleDeleteExpense(e)} className="p-3 text-slate-200 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={16}/></button>
             </div>
           </div>
         ))}
