@@ -44,17 +44,19 @@ const Dashboard = ({ setActiveModule, handleLogout, handleInstall, hasInstallPro
 
   return (
     <div className="space-y-6 animate-fade-in relative pb-10 no-scrollbar">
-      {/* Aviso Persuasivo de Instalación para eliminar la barra (Regla 94) */}
+      {/* Aviso Persuasivo de Instalación (Regla 91/94) */}
       {hasInstallPrompt && (
-        <div className="bg-blue-600 p-4 rounded-3xl text-white flex items-center justify-between shadow-2xl animate-pulse">
+        <div className="bg-indigo-600 p-5 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between shadow-2xl animate-pulse gap-4">
           <div className="flex items-center gap-4">
-            <div className="bg-white/20 p-2 rounded-xl"><Smartphone size={24}/></div>
+            <div className="bg-white/20 p-3 rounded-2xl"><Smartphone size={28}/></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest">Mejora tu experiencia</p>
-              <p className="text-[9px] font-bold opacity-80 uppercase">Instala la App para eliminar la barra del navegador y evitar errores 404.</p>
+              <p className="text-[11px] font-black uppercase tracking-widest leading-none">MODO APP RECOMENDADO</p>
+              <p className="text-[9px] font-bold opacity-80 uppercase mt-1">Instala para eliminar la barra del navegador y evitar errores de cierre.</p>
             </div>
           </div>
-          <button onClick={handleInstall} className="bg-white text-blue-600 px-6 py-2 rounded-xl font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all">INSTALAR AHORA</button>
+          <button onClick={handleInstall} className="w-full md:w-auto bg-white text-indigo-600 px-8 py-3 rounded-2xl font-black uppercase text-[10px] shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2">
+            <Download size={16}/> INSTALAR AHORA
+          </button>
         </div>
       )}
 

@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#1e40af">
     
-    <!-- Enforzamiento de modo Standalone para evitar barra de URL (Regla 94) -->
+    <!-- Enforzamiento Modo Standalone (Elimina barra de URL - Regla 94) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="VenueLog">
+    <link rel="apple-touch-icon" href="https://picsum.photos/192/192?random=icon">
     
     <title>Venue Logistics - Core v5.0</title>
     <link rel="manifest" href="./manifest.json">
@@ -47,9 +48,7 @@
         
         input:not([type="email"]):not(.lowercase-input), 
         textarea:not(.lowercase-input), 
-        select { 
-          text-transform: uppercase !important; 
-        }
+        select { text-transform: uppercase !important; }
         
         input[type="number"]::-webkit-inner-spin-button, 
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -61,7 +60,6 @@
           @page { size: A4; margin: 10mm; }
         }
         .print-only { display: none; }
-
         .action-container { display: flex; flex-wrap: wrap; gap: 0.5rem; opacity: 1 !important; visibility: visible !important; }
     </style>
 <script type="importmap">
@@ -78,7 +76,19 @@
 </head>
 <body class="text-slate-900 overflow-x-hidden">
     <div id="root"></div>
-    <!-- Script relativo para compatibilidad total con GitHub y Netlify -->
+    <!-- Script de redirección para manejar 404 en GitHub Pages -->
+    <script type="text/javascript">
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location))
+    </script>
     <script type="module" src="./index.tsx"></script>
 <script type="module" src="/index.tsx"></script>
 </body>
